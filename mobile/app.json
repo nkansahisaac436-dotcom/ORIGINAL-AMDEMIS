@@ -4,22 +4,16 @@
     "slug": "amdemis-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/coat_of_arms.png",
+    "icon": "./assets/icon.png",
     "scheme": "amdemis",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/coat_of_arms.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0A2A66"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "gh.gov.amdemis.mobile"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/coat_of_arms.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0A2A66"
       },
       "package": "gh.gov.amdemis.mobile"
@@ -27,12 +21,10 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/coat_of_arms.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
-      "expo-router",
-      "expo-asset",
-      "expo-font"
+      "expo-router"
     ],
     "experiments": {
       "typedRoutes": true
