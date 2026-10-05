@@ -1,0 +1,24 @@
+{
+  "name": "AMDEMIS - Atwima Mponua District Education MIS",
+  "short_name": "AMDEMIS",
+  "description": "Atwima Mponua District Education Directorate Annual School Data Collection System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A2A66",
+  "theme_color": "#0A2A66",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/branding/coat_of_arms.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/branding/coat_of_arms.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

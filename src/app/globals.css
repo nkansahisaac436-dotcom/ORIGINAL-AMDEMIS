@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 218 50% 96%; /* #EEF3FB */
+    --foreground: 222 47% 11%; /* #14213D */
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 219 82% 22%; /* #0A2A66 Navy */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 219 76% 30%; /* #123B86 Mid Blue */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 218 20% 92%;
+    --muted-foreground: 218 20% 45%; /* #5B6B88 */
+
+    --accent: 45 96% 48%; /* #F2B705 Gold */
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 41%; /* #B42318 Error */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 218 25% 88%;
+    --input: 218 25% 88%;
+    --ring: 45 96% 48%; /* Gold focus ring */
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222 55% 10%; /* #0B132B */
+    --foreground: 218 30% 95%;
+
+    --card: 222 47% 14%;
+    --card-foreground: 218 30% 95%;
+
+    --popover: 222 47% 14%;
+    --popover-foreground: 218 30% 95%;
+
+    --primary: 219 80% 35%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 219 76% 25%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 222 30% 20%;
+    --muted-foreground: 218 15% 65%;
+
+    --accent: 45 96% 48%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 222 30% 22%;
+    --input: 222 30% 22%;
+    --ring: 45 96% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased selection:bg-brand-gold selection:text-brand-navy;
+    font-size: 15px;
+  }
+  /* Large tap targets and accessible minimum text sizes */
+  input, select, textarea, button {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-1;
+  }
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
+
+.gold-glow {
+  box-shadow: 0 0 15px rgba(242, 183, 5, 0.35);
+}
+
+.navy-gradient {
+  background: linear-gradient(135deg, #0A2A66 0%, #123B86 100%);
+}
