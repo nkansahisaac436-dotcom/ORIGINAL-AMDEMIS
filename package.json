@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "mobile": "npm --prefix mobile run start",
+    "mobile:ios": "npm --prefix mobile run ios",
+    "mobile:android": "npm --prefix mobile run android"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
