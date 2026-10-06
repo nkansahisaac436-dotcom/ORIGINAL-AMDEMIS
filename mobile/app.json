@@ -31,8 +31,8 @@
       "typedRoutes": true
     },
     "extra": {
-      "supabaseUrl": "https://your-project.supabase.co",
-      "supabaseAnonKey": "your-anon-key",
+      "supabaseUrl": "https://egzywifjhwiefsubjcvj.supabase.co",
+      "supabaseAnonKey": "sb_publishable_1lKcau1MyYpx8siLkWAzZA_9KUakNrt",
       "router": {},
       "eas": {
         "projectId": "98bdfc13-af2c-451b-aa9a-153810cc6188"
