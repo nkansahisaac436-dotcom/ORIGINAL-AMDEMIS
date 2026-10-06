@@ -74,14 +74,7 @@ export async function GET() {
     return NextResponse.json({
       school: profile.schools,
       headteacher_name: profile.full_name || profile.schools?.headteacher_name || 'Headteacher',
-      round: round || {
-        id: 'mock-round-id',
-        title: '2025/2026 Academic Year',
-        instructions: 'Please complete your annual EMIS return accurately.',
-        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        is_active: true,
-        is_locked: false,
-      },
+      round: round || null,
       submission,
     });
   } catch (error: unknown) {

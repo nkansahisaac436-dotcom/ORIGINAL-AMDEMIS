@@ -46,31 +46,25 @@ export default function HeadteacherDashboardPage() {
   }, []);
 
   const school = context?.school || {
-    name: 'Atwima Mponua Basic School',
+    name: 'District Basic School',
     status: 'public',
     school_login_id: 'AMD-0042',
-    circuits: { name: 'Nyinahin Circuit' },
+    circuits: { name: 'District Circuit' },
   };
 
-  const round = context?.round || {
-    title: '2025/2026 Academic Year',
-    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    is_active: true,
-  };
-
+  const round = context?.round;
   const submission = context?.submission;
   const status = submission?.status || 'not_started';
 
-  // Calculate countdown to deadline
-  const deadlineDate = new Date(round.deadline);
-  const now = new Date();
-  const diffTime = deadlineDate.getTime() - now.getTime();
-  const diffDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  // Calculate countdown to deadline if round exists
+  const diffDays = round?.deadline
+    ? Math.max(0, Math.ceil((new Date(round.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
+    : 0;
 
   return (
     <HeadteacherLayout
       schoolName={school.name}
-      roundTitle={round.title}
+      roundTitle={round?.title || 'No Active Collection Round'}
       headteacherName={context?.headteacher_name || 'Headteacher'}
     >
       <div className="space-y-6">
@@ -146,16 +140,18 @@ export default function HeadteacherDashboardPage() {
               <div className="flex items-center gap-2">
                 <CalendarDays className="h-5 w-5 text-brand-midBlue dark:text-brand-gold" />
                 <span className="text-lg font-bold text-foreground">
-                  {new Date(round.deadline).toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
+                  {round?.deadline
+                    ? new Date(round.deadline).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                    : 'No Active Round'}
                 </span>
               </div>
               <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200">
                 <Clock className="h-3.5 w-3.5" />
-                <span>{diffDays} days remaining</span>
+                <span>{round ? `${diffDays} days remaining` : 'Collection closed'}</span>
               </div>
             </CardContent>
           </Card>
@@ -189,7 +185,7 @@ export default function HeadteacherDashboardPage() {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-2 max-w-xl">
               <span className="text-xs font-bold uppercase tracking-wider text-brand-midBlue dark:text-brand-gold">
-                Annual Data Collection — {round.title}
+                Annual Data Collection — {round?.title || 'Academic Cycle'}
               </span>
               <h2 className="text-xl sm:text-2xl font-extrabold text-foreground">
                 {status === 'submitted'

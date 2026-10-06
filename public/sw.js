@@ -1,10 +1,9 @@
-const CACHE_NAME = 'amdemis-cache-v1';
+const CACHE_NAME = 'amdemis-cache-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
   '/branding/banner.jpg',
   '/branding/coat_of_arms.png',
-  '/branding/Interface.png',
   '/favicon.ico'
 ];
 
