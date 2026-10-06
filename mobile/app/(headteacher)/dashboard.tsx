@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { DEMO_ACCOUNTS, getDemoSession } from '../../src/lib/demo-data';
 import { supabase } from '../../src/lib/supabase';
 import { THEME } from '../../src/lib/theme';
 
@@ -29,10 +30,27 @@ export default function HeadteacherDashboard() {
 
   const loadDashboard = async () => {
     try {
+      // 1. Check demo session first
+      const demo = await getDemoSession();
+      if (demo?.school) {
+        setSchoolData(demo.school);
+        setActiveRound(DEMO_ACCOUNTS.activeRound);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      // 2. Query Supabase
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        // Fallback default
+        setActiveRound(DEMO_ACCOUNTS.activeRound);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -51,7 +69,7 @@ export default function HeadteacherDashboard() {
         .eq('is_active', true)
         .single();
 
-      setActiveRound(round);
+      setActiveRound(round || DEMO_ACCOUNTS.activeRound);
 
       if (round && profile?.school_id) {
         // Query submission

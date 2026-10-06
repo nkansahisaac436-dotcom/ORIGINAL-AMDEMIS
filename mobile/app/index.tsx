@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -14,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { DEMO_ACCOUNTS, setDemoSession } from '../src/lib/demo-data';
 import { supabase } from '../src/lib/supabase';
 import { THEME } from '../src/lib/theme';
 
@@ -50,6 +52,25 @@ export default function IndexScreen() {
     }
 
     setLoading(true);
+
+    // 1. Check if matching demo accounts first for instant offline access
+    const matchedDemo = DEMO_ACCOUNTS.headteachers.find(
+      (h) => h.loginId.toUpperCase() === cleanId && h.pin === cleanPin
+    );
+
+    if (matchedDemo) {
+      await setDemoSession({
+        role: 'headteacher',
+        school: matchedDemo.school,
+        user: { id: `demo-user-${matchedDemo.loginId}`, email: `${matchedDemo.loginId.toLowerCase()}@amdemis.local` },
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setLoading(false);
+      router.replace('/(headteacher)/dashboard');
+      return;
+    }
+
+    // 2. Query live Supabase Auth
     try {
       const syntheticEmail = `${cleanId.toLowerCase()}@amdemis.local`;
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -64,7 +85,6 @@ export default function IndexScreen() {
       }
 
       if (data.user) {
-        // Query profile role
         const { data: profile } = await supabase
           .from('profiles')
           .select('role, school_id')
@@ -86,16 +106,37 @@ export default function IndexScreen() {
 
   const handleAdminLogin = async () => {
     setErrorMsg('');
-    if (!email.trim() || !password) {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = password.trim();
+
+    if (!cleanEmail || !cleanPass) {
       setErrorMsg('Please enter both email and password.');
       return;
     }
 
     setLoading(true);
+
+    // 1. Check demo admin account for instant access
+    if (
+      cleanEmail === DEMO_ACCOUNTS.admin.email.toLowerCase() &&
+      cleanPass === DEMO_ACCOUNTS.admin.password
+    ) {
+      await setDemoSession({
+        role: 'super_admin',
+        user: { id: DEMO_ACCOUNTS.admin.profile.id, email: DEMO_ACCOUNTS.admin.email },
+        profile: DEMO_ACCOUNTS.admin.profile,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setLoading(false);
+      router.replace('/(admin)/dashboard');
+      return;
+    }
+
+    // 2. Query live Supabase Auth
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password,
+        email: cleanEmail,
+        password: cleanPass,
       });
 
       if (error) {
@@ -112,6 +153,20 @@ export default function IndexScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const quickFillHT = (id: string, p: string) => {
+    setLoginId(id);
+    setPin(p);
+    setErrorMsg('');
+    Haptics.selectionAsync();
+  };
+
+  const quickFillAdmin = () => {
+    setEmail(DEMO_ACCOUNTS.admin.email);
+    setPassword(DEMO_ACCOUNTS.admin.password);
+    setErrorMsg('');
+    Haptics.selectionAsync();
   };
 
   return (
@@ -191,7 +246,7 @@ export default function IndexScreen() {
                   <Text style={styles.label}>SCHOOL LOGIN ID</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="AMD-0042"
+                    placeholder="AMD-0001"
                     placeholderTextColor={THEME.colors.textLight}
                     value={loginId}
                     onChangeText={(txt) => setLoginId(txt.toUpperCase())}
@@ -232,9 +287,24 @@ export default function IndexScreen() {
                   )}
                 </TouchableOpacity>
 
-                <Text style={styles.hintText}>
-                  Lost your PIN or changed schools? Ask the Planning & Statistics Unit to reset it.
-                </Text>
+                {/* 1-Tap Quick Test Buttons */}
+                <View style={styles.quickTestBox}>
+                  <Text style={styles.quickTestTitle}>⚡ 1-Tap Demo Test Accounts:</Text>
+                  <View style={styles.quickBtnRow}>
+                    <TouchableOpacity
+                      style={styles.quickBtn}
+                      onPress={() => quickFillHT('AMD-0001', '123456')}
+                    >
+                      <Text style={styles.quickBtnText}>Nyinahin Basic (AMD-0001)</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.quickBtn}
+                      onPress={() => quickFillHT('AMD-0002', '654321')}
+                    >
+                      <Text style={styles.quickBtnText}>Mpasatia JHS (AMD-0002)</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
             ) : (
               <View style={styles.formBody}>
@@ -248,7 +318,7 @@ export default function IndexScreen() {
                   <Text style={styles.label}>OFFICIAL EMAIL</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="officer@amdemis.gov.gh"
+                    placeholder="admin@amdemis.gov.gh"
                     placeholderTextColor={THEME.colors.textLight}
                     value={email}
                     onChangeText={setEmail}
@@ -288,16 +358,13 @@ export default function IndexScreen() {
                   )}
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  onPress={() =>
-                    Alert.alert(
-                      'Forgot Password',
-                      'Please contact the Directorate Super Administrator to reset your email password.'
-                    )
-                  }
-                >
-                  <Text style={styles.forgotText}>Forgot password?</Text>
-                </TouchableOpacity>
+                {/* 1-Tap Admin Quick Fill */}
+                <View style={styles.quickTestBox}>
+                  <Text style={styles.quickTestTitle}>⚡ 1-Tap Admin Demo:</Text>
+                  <TouchableOpacity style={styles.quickBtn} onPress={quickFillAdmin}>
+                    <Text style={styles.quickBtnText}>Fill Admin: admin@amdemis.gov.gh</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </View>
@@ -305,7 +372,7 @@ export default function IndexScreen() {
           {/* Footer Note */}
           <Text style={styles.footerNote}>
             © {new Date().getFullYear()} AMDEMIS • Atwima Mponua District Education Directorate.
-            Collecting official statistics for district planning.
+            Official EMIS Data Portal.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -465,19 +532,37 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
   },
-  hintText: {
-    fontSize: 12,
-    color: THEME.colors.textMuted,
-    textAlign: 'center',
-    marginTop: 14,
-    lineHeight: 16,
+  quickTestBox: {
+    marginTop: 20,
+    padding: 12,
+    backgroundColor: '#F0F5FF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#D0E1FD',
   },
-  forgotText: {
-    fontSize: 13,
-    color: THEME.colors.midBlue,
-    textAlign: 'center',
-    marginTop: 14,
+  quickTestTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: THEME.colors.navy,
+    marginBottom: 8,
+  },
+  quickBtnRow: {
+    flexDirection: 'column',
+    gap: 6,
+  },
+  quickBtn: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+  },
+  quickBtnText: {
+    fontSize: 12,
     fontWeight: '600',
+    color: THEME.colors.midBlue,
   },
   footerNote: {
     fontSize: 11,

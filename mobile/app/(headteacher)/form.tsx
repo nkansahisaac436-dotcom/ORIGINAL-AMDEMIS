@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { DEMO_ACCOUNTS, getDemoSession } from '../../src/lib/demo-data';
 import { EDUCATION_LEVELS, LevelKey } from '../../src/lib/levels-config';
 import { generateAndShareReceipt } from '../../src/lib/pdf-generator';
 import { supabase } from '../../src/lib/supabase';
@@ -101,10 +102,36 @@ export default function HeadteacherFormScreen() {
 
   const loadFormContext = async () => {
     try {
+      // 1. Check Demo Session
+      const demo = await getDemoSession();
+      if (demo?.school) {
+        setSchool(demo.school);
+        setHeadteacherName(demo.school.headteacher_name || '');
+        setPhone(demo.school.headteacher_phone || '');
+        setEmisCode(demo.school.emis_code || '');
+        setRound(DEMO_ACCOUNTS.activeRound);
+        if (demo.school.levels && demo.school.levels.length > 0) {
+          setChosenLevels(demo.school.levels);
+        }
+        // Check local cache
+        const localCache = await AsyncStorage.getItem(`amdemis_form_${demo.school.id}_demo`);
+        if (localCache) {
+          populateFormData(JSON.parse(localCache));
+        }
+        setLoading(false);
+        return;
+      }
+
+      // 2. Query Supabase
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setSchool(DEMO_ACCOUNTS.headteachers[0].school);
+        setRound(DEMO_ACCOUNTS.activeRound);
+        setLoading(false);
+        return;
+      }
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -124,10 +151,9 @@ export default function HeadteacherFormScreen() {
         .eq('is_active', true)
         .single();
 
-      setRound(activeRound);
+      setRound(activeRound || DEMO_ACCOUNTS.activeRound);
 
       if (activeRound) {
-        // Fetch existing draft or submission
         const { data: sub } = await supabase
           .from('submissions')
           .select('*, submission_levels(level_key)')
@@ -144,7 +170,6 @@ export default function HeadteacherFormScreen() {
             populateFormData(sub.form_data);
           }
         } else {
-          // Check local offline cache
           const localCache = await AsyncStorage.getItem(
             `amdemis_form_${profile.school_id}_${activeRound.id}`
           );

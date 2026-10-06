@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { clearDemoSession, getDemoSession } from '../../src/lib/demo-data';
 import { supabase } from '../../src/lib/supabase';
 import { THEME } from '../../src/lib/theme';
 
@@ -15,26 +16,41 @@ export default function HeadteacherLayout() {
   }, []);
 
   const loadUserContext = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      router.replace('/');
+    // 1. Check demo session first
+    const demo = await getDemoSession();
+    if (demo?.school) {
+      setSchoolName(demo.school.name || 'My School');
+      if (demo.school.circuits?.name) {
+        setCircuitName(demo.school.circuits.name);
+      }
       return;
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('school_id, full_name, schools(name, circuits(name))')
-      .eq('id', user.id)
-      .single();
-
-    if (profile?.schools) {
-      const sch: any = profile.schools;
-      setSchoolName(sch.name || 'My School');
-      if (sch.circuits?.name) {
-        setCircuitName(sch.circuits.name);
+    // 2. Check Supabase Auth
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.replace('/');
+        return;
       }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('school_id, full_name, schools(name, circuits(name))')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.schools) {
+        const sch: any = profile.schools;
+        setSchoolName(sch.name || 'My School');
+        if (sch.circuits?.name) {
+          setCircuitName(sch.circuits.name);
+        }
+      }
+    } catch {
+      // Fallback
     }
   };
 
@@ -45,6 +61,7 @@ export default function HeadteacherLayout() {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
+          await clearDemoSession();
           await supabase.auth.signOut();
           router.replace('/');
         },
