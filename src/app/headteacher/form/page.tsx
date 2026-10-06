@@ -57,8 +57,8 @@ export default function HeadteacherFormWizardPage() {
           if (data.round) setRound(data.round);
           if (data.headteacher_name) setHeadteacherName(data.headteacher_name);
 
-          // Check if there is local draft or server draft
-          const localDraftKey = `amdemis_draft_${data.school?.id || 'default'}_${data.round?.id || 'default'}`;
+          // Check if there is local draft or server draft (V2 format to clear old demo caches)
+          const localDraftKey = `amdemis_v2_draft_${data.school?.id || 'default'}_${data.round?.id || 'default'}`;
           const localSaved = localStorage.getItem(localDraftKey);
 
           if (localSaved) {
@@ -85,7 +85,7 @@ export default function HeadteacherFormWizardPage() {
   // Auto-save locally to localStorage on every change
   React.useEffect(() => {
     if (school.id && round.id) {
-      const localDraftKey = `amdemis_draft_${school.id}_${round.id}`;
+      const localDraftKey = `amdemis_v2_draft_${school.id}_${round.id}`;
       localStorage.setItem(localDraftKey, JSON.stringify(formData));
     }
   }, [formData, school.id, round.id]);
@@ -279,7 +279,7 @@ export default function HeadteacherFormWizardPage() {
 
       // Clear local draft
       if (school.id && round.id) {
-        localStorage.removeItem(`amdemis_draft_${school.id}_${round.id}`);
+        localStorage.removeItem(`amdemis_v2_draft_${school.id}_${round.id}`);
       }
 
       setReceiptData(data);

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { FormWizardState } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Users, BookOpen, Armchair, AlertCircle } from 'lucide-react';
+import { getCrecheTotals } from '@/lib/enrolment-totals';
 
 interface StepCrecheProps {
   formData: FormWizardState;
@@ -13,10 +14,7 @@ interface StepCrecheProps {
 
 export function StepCreche({ formData, updateCreche, errors = {} }: StepCrecheProps) {
   const c = formData.creche;
-
-  const totalBoys = Number(c.boys) || 0;
-  const totalGirls = Number(c.girls) || 0;
-  const totalPupils = totalBoys + totalGirls;
+  const crecheTotals = getCrecheTotals(c);
 
   const perm = Number(c.classrooms.permanent) || 0;
   const good = Number(c.classrooms.good_condition) || 0;
@@ -52,7 +50,7 @@ export function StepCreche({ formData, updateCreche, errors = {} }: StepCrechePr
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
           <Input
             label="Boys Enrolment"
             required
@@ -73,11 +71,23 @@ export function StepCreche({ formData, updateCreche, errors = {} }: StepCrechePr
             onChange={(e) => updateCreche({ girls: e.target.value })}
             error={errors['creche.girls']}
           />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-blue-900 dark:text-blue-300">
+              Crèche/Nursery Total
+            </label>
+            <div
+              className="flex h-10 items-center justify-center rounded-md border border-blue-200 bg-blue-50/90 dark:bg-blue-950/50 dark:border-blue-800 px-3 py-2 font-mono text-base font-bold text-blue-900 dark:text-blue-200 shadow-xs select-none"
+              aria-label="Crèche / Nursery Total"
+            >
+              {crecheTotals.total}
+            </div>
+          </div>
         </div>
 
-        <div className="p-3 bg-purple-50 dark:bg-purple-950/40 rounded-lg text-xs font-semibold text-purple-900 dark:text-purple-200 flex justify-between">
-          <span>Total Crèche / Nursery Enrolment:</span>
-          <span>{totalPupils} Pupils ({totalBoys} Boys, {totalGirls} Girls)</span>
+        <div className="p-3 bg-blue-50/80 dark:bg-blue-950/40 rounded-xl border border-blue-200/80 dark:border-blue-800 text-xs font-semibold text-blue-950 dark:text-blue-200 flex flex-wrap items-center justify-between gap-2">
+          <span>Total Boys: <strong className="font-bold text-blue-900 dark:text-blue-100">{crecheTotals.boys}</strong></span>
+          <span>Total Girls: <strong className="font-bold text-blue-900 dark:text-blue-100">{crecheTotals.girls}</strong></span>
+          <span className="font-bold text-blue-900 dark:text-blue-100">Total Pupils: {crecheTotals.total}</span>
         </div>
       </div>
 

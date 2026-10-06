@@ -4,6 +4,7 @@ import * as React from 'react';
 import { FormWizardState } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Users, GraduationCap, Armchair, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { getKGTotals } from '@/lib/enrolment-totals';
 
 interface StepKGProps {
   formData: FormWizardState;
@@ -13,6 +14,7 @@ interface StepKGProps {
 
 export function StepKG({ formData, updateKG, errors = {} }: StepKGProps) {
   const kg = formData.kg;
+  const kgTotals = getKGTotals(kg.enrolment);
 
   // Helpers for enrolment changes
   const handleEnrolmentChange = (field: keyof FormWizardState['kg']['enrolment'], val: string) => {
@@ -52,14 +54,14 @@ export function StepKG({ formData, updateKG, errors = {} }: StepKGProps) {
   };
 
   // Calculations
-  const kg1B = Number(kg.enrolment.kg1_boys) || 0;
-  const kg1G = Number(kg.enrolment.kg1_girls) || 0;
-  const kg2B = Number(kg.enrolment.kg2_boys) || 0;
-  const kg2G = Number(kg.enrolment.kg2_girls) || 0;
+  const kg1B = kgTotals.kg1.boys;
+  const kg1G = kgTotals.kg1.girls;
+  const kg2B = kgTotals.kg2.boys;
+  const kg2G = kgTotals.kg2.girls;
 
-  const totalKGBoys = kg1B + kg2B;
-  const totalKGGirls = kg1G + kg2G;
-  const grandTotalKG = totalKGBoys + totalKGGirls;
+  const totalKGBoys = kgTotals.boys;
+  const totalKGGirls = kgTotals.girls;
+  const grandTotalKG = kgTotals.total;
 
   // Teacher balance check
   const classTeachers = (Number(kg.teachers.kg1_teachers) || 0) + (Number(kg.teachers.kg2_teachers) || 0);
@@ -79,7 +81,7 @@ export function StepKG({ formData, updateKG, errors = {} }: StepKGProps) {
   return (
     <div className="space-y-6">
       {/* 1. General Enrolment */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
           <Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">
@@ -87,53 +89,92 @@ export function StepKG({ formData, updateKG, errors = {} }: StepKGProps) {
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Input
-            label="KG1 Boys"
-            required
-            type="number"
-            min={0}
-            placeholder="0"
-            value={kg.enrolment.kg1_boys}
-            onChange={(e) => handleEnrolmentChange('kg1_boys', e.target.value)}
-            error={errors['kg.enrolment.kg1_boys']}
-          />
-          <Input
-            label="KG1 Girls"
-            required
-            type="number"
-            min={0}
-            placeholder="0"
-            value={kg.enrolment.kg1_girls}
-            onChange={(e) => handleEnrolmentChange('kg1_girls', e.target.value)}
-            error={errors['kg.enrolment.kg1_girls']}
-          />
-          <Input
-            label="KG2 Boys"
-            required
-            type="number"
-            min={0}
-            placeholder="0"
-            value={kg.enrolment.kg2_boys}
-            onChange={(e) => handleEnrolmentChange('kg2_boys', e.target.value)}
-            error={errors['kg.enrolment.kg2_boys']}
-          />
-          <Input
-            label="KG2 Girls"
-            required
-            type="number"
-            min={0}
-            placeholder="0"
-            value={kg.enrolment.kg2_girls}
-            onChange={(e) => handleEnrolmentChange('kg2_girls', e.target.value)}
-            error={errors['kg.enrolment.kg2_girls']}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* KG1 Card */}
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2.5">
+            <span className="font-bold text-xs uppercase text-brand-navy dark:text-emerald-300">
+              Class KG 1
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+              <Input
+                label="KG1 Boys"
+                required
+                type="number"
+                min={0}
+                placeholder="0"
+                value={kg.enrolment.kg1_boys}
+                onChange={(e) => handleEnrolmentChange('kg1_boys', e.target.value)}
+                error={errors['kg.enrolment.kg1_boys']}
+              />
+              <Input
+                label="KG1 Girls"
+                required
+                type="number"
+                min={0}
+                placeholder="0"
+                value={kg.enrolment.kg1_girls}
+                onChange={(e) => handleEnrolmentChange('kg1_girls', e.target.value)}
+                error={errors['kg.enrolment.kg1_girls']}
+              />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-blue-900 dark:text-blue-300">
+                  KG1 Total
+                </label>
+                <div
+                  className="flex h-10 items-center justify-center rounded-md border border-blue-200 bg-blue-50/90 dark:bg-blue-950/50 dark:border-blue-800 px-3 py-2 font-mono text-base font-bold text-blue-900 dark:text-blue-200 shadow-xs select-none"
+                  aria-label="KG1 Total"
+                >
+                  {kgTotals.kg1.total}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* KG2 Card */}
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2.5">
+            <span className="font-bold text-xs uppercase text-brand-navy dark:text-emerald-300">
+              Class KG 2
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+              <Input
+                label="KG2 Boys"
+                required
+                type="number"
+                min={0}
+                placeholder="0"
+                value={kg.enrolment.kg2_boys}
+                onChange={(e) => handleEnrolmentChange('kg2_boys', e.target.value)}
+                error={errors['kg.enrolment.kg2_boys']}
+              />
+              <Input
+                label="KG2 Girls"
+                required
+                type="number"
+                min={0}
+                placeholder="0"
+                value={kg.enrolment.kg2_girls}
+                onChange={(e) => handleEnrolmentChange('kg2_girls', e.target.value)}
+                error={errors['kg.enrolment.kg2_girls']}
+              />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-blue-900 dark:text-blue-300">
+                  KG2 Total
+                </label>
+                <div
+                  className="flex h-10 items-center justify-center rounded-md border border-blue-200 bg-blue-50/90 dark:bg-blue-950/50 dark:border-blue-800 px-3 py-2 font-mono text-base font-bold text-blue-900 dark:text-blue-200 shadow-xs select-none"
+                  aria-label="KG2 Total"
+                >
+                  {kgTotals.kg2.total}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg text-xs font-semibold text-emerald-900 dark:text-emerald-200 flex flex-wrap justify-between gap-2">
-          <span>KG1 Total: {kg1B + kg1G} ({kg1B} Boys, {kg1G} Girls)</span>
-          <span>KG2 Total: {kg2B + kg2G} ({kg2B} Boys, {kg2G} Girls)</span>
-          <span className="font-bold">Grand Total KG: {grandTotalKG} Pupils</span>
+        <div className="p-3 bg-blue-50/80 dark:bg-blue-950/40 rounded-xl border border-blue-200/80 dark:border-blue-800 text-xs font-semibold text-blue-950 dark:text-blue-200 flex flex-wrap items-center justify-between gap-2">
+          <span>Total Boys: <strong className="font-bold text-blue-900 dark:text-blue-100">{kgTotals.boys}</strong></span>
+          <span>Total Girls: <strong className="font-bold text-blue-900 dark:text-blue-100">{kgTotals.girls}</strong></span>
+          <span className="font-bold text-blue-900 dark:text-blue-100">Total Pupils: {kgTotals.total}</span>
         </div>
       </div>
 

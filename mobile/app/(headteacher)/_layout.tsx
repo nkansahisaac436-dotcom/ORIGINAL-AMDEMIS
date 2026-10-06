@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { clearDemoSession, getDemoSession } from '../../src/lib/demo-data';
 import { supabase } from '../../src/lib/supabase';
 import { THEME } from '../../src/lib/theme';
 
@@ -16,17 +15,6 @@ export default function HeadteacherLayout() {
   }, []);
 
   const loadUserContext = async () => {
-    // 1. Check demo session first
-    const demo = await getDemoSession();
-    if (demo?.school) {
-      setSchoolName(demo.school.name || 'My School');
-      if (demo.school.circuits?.name) {
-        setCircuitName(demo.school.circuits.name);
-      }
-      return;
-    }
-
-    // 2. Check Supabase Auth
     try {
       const {
         data: { user },
@@ -61,7 +49,6 @@ export default function HeadteacherLayout() {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
-          await clearDemoSession();
           await supabase.auth.signOut();
           router.replace('/');
         },

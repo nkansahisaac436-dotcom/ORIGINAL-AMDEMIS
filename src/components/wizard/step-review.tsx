@@ -4,6 +4,7 @@ import * as React from 'react';
 import { FormWizardState, School } from '@/types';
 import { calculateTotals, getValidationWarnings } from '@/lib/schemas/submission';
 import { getLevelName } from '@/lib/levels-config';
+import { getSchoolTotals } from '@/lib/enrolment-totals';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import {
@@ -271,10 +272,12 @@ export function StepReview({
         {/* Level Summaries */}
         {chosenLevels.map((levelId) => {
           const lTotals = totals[levelId as 'creche' | 'kg' | 'primary' | 'jhs'];
+          const schoolSummary = getSchoolTotals(formData);
+
           return (
             <div
               key={levelId}
-              className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2 text-xs"
+              className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3 text-xs"
             >
               <div className="flex items-center justify-between border-b pb-2">
                 <span className="font-bold text-sm text-brand-navy dark:text-brand-gold flex items-center gap-2">
@@ -289,13 +292,51 @@ export function StepReview({
                   Edit
                 </button>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-                <div>
-                  <span className="text-muted-foreground block">Total Enrolment:</span>
-                  <span className="font-bold text-foreground">
-                    {lTotals.total} ({lTotals.boys} Boys, {lTotals.girls} Girls)
-                  </span>
+
+              {/* Class-level breakdown pills */}
+              {levelId === 'kg' && (
+                <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
+                  <div className="p-2.5 rounded-lg bg-blue-50/70 dark:bg-slate-800 border border-blue-100 dark:border-slate-700">
+                    <span className="text-[11px] font-bold text-brand-navy dark:text-blue-200 block">KG1 Total</span>
+                    <span className="text-base font-extrabold text-foreground font-mono">{schoolSummary.kg.kg1.total}</span>
+                    <span className="text-[10px] text-muted-foreground block">{schoolSummary.kg.kg1.boys} Boys, {schoolSummary.kg.kg1.girls} Girls</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-blue-50/70 dark:bg-slate-800 border border-blue-100 dark:border-slate-700">
+                    <span className="text-[11px] font-bold text-brand-navy dark:text-blue-200 block">KG2 Total</span>
+                    <span className="text-base font-extrabold text-foreground font-mono">{schoolSummary.kg.kg2.total}</span>
+                    <span className="text-[10px] text-muted-foreground block">{schoolSummary.kg.kg2.boys} Boys, {schoolSummary.kg.kg2.girls} Girls</span>
+                  </div>
                 </div>
+              )}
+
+              {levelId === 'primary' && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                  {(['bs1', 'bs2', 'bs3', 'bs4', 'bs5', 'bs6'] as const).map((cls) => (
+                    <div key={cls} className="p-2 rounded-lg bg-blue-50/70 dark:bg-slate-800 border border-blue-100 dark:border-slate-700">
+                      <span className="text-[11px] font-bold uppercase text-brand-navy dark:text-blue-200 block">{cls} Total</span>
+                      <span className="text-base font-extrabold text-foreground font-mono">{schoolSummary.primary[cls].total}</span>
+                      <span className="text-[10px] text-muted-foreground block">{schoolSummary.primary[cls].boys}B / {schoolSummary.primary[cls].girls}G</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {levelId === 'jhs' && (
+                <div className="grid grid-cols-3 gap-2">
+                  {(['jhs1', 'jhs2', 'jhs3'] as const).map((cls) => (
+                    <div key={cls} className="p-2.5 rounded-lg bg-blue-50/70 dark:bg-slate-800 border border-blue-100 dark:border-slate-700">
+                      <span className="text-[11px] font-bold uppercase text-brand-navy dark:text-blue-200 block">{cls} Total</span>
+                      <span className="text-base font-extrabold text-foreground font-mono">{schoolSummary.jhs[cls].total}</span>
+                      <span className="text-[10px] text-muted-foreground block">{schoolSummary.jhs[cls].boys}B / {schoolSummary.jhs[cls].girls}G</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="p-2.5 bg-blue-50/90 dark:bg-blue-950/40 rounded-lg border border-blue-200 dark:border-blue-800 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold">
+                <span>Total {getLevelName(levelId)} Boys: <strong className="font-bold text-blue-900 dark:text-blue-100">{lTotals.boys}</strong></span>
+                <span>Total {getLevelName(levelId)} Girls: <strong className="font-bold text-blue-900 dark:text-blue-100">{lTotals.girls}</strong></span>
+                <span className="font-bold text-blue-900 dark:text-blue-100">Total {getLevelName(levelId)} Pupils: {lTotals.total}</span>
               </div>
             </div>
           );

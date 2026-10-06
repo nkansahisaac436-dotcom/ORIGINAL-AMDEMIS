@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { FormWizardState } from '@/types';
 import { LevelId } from '../levels-config';
+import { getSchoolTotals } from '../enrolment-totals';
 
 // Helper for numeric string or number coercion
 const countField = z.union([z.number(), z.string()]).transform((val) => {
@@ -559,53 +560,20 @@ export const infrastructureSectionSchema = z.object({
 // Auto-calculation functions for UI and backend
 export function calculateTotals(data: FormWizardState) {
   const levels = data.school_details.chosen_levels || [];
+  const schoolTotals = getSchoolTotals(data);
 
-  // Enrolment calculations
-  let crecheBoys = 0, crecheGirls = 0;
-  if (levels.includes('creche')) {
-    crecheBoys = Number(data.creche.boys) || 0;
-    crecheGirls = Number(data.creche.girls) || 0;
-  }
+  const crecheBoys = levels.includes('creche') ? schoolTotals.creche.boys : 0;
+  const crecheGirls = levels.includes('creche') ? schoolTotals.creche.girls : 0;
+  const kgBoys = levels.includes('kg') ? schoolTotals.kg.boys : 0;
+  const kgGirls = levels.includes('kg') ? schoolTotals.kg.girls : 0;
+  const primaryBoys = levels.includes('primary') ? schoolTotals.primary.boys : 0;
+  const primaryGirls = levels.includes('primary') ? schoolTotals.primary.girls : 0;
+  const jhsBoys = levels.includes('jhs') ? schoolTotals.jhs.boys : 0;
+  const jhsGirls = levels.includes('jhs') ? schoolTotals.jhs.girls : 0;
 
-  let kgBoys = 0, kgGirls = 0;
-  if (levels.includes('kg')) {
-    kgBoys = (Number(data.kg.enrolment.kg1_boys) || 0) + (Number(data.kg.enrolment.kg2_boys) || 0);
-    kgGirls = (Number(data.kg.enrolment.kg1_girls) || 0) + (Number(data.kg.enrolment.kg2_girls) || 0);
-  }
-
-  let primaryBoys = 0, primaryGirls = 0;
-  if (levels.includes('primary')) {
-    primaryBoys =
-      (Number(data.primary.enrolment.bs1_boys) || 0) +
-      (Number(data.primary.enrolment.bs2_boys) || 0) +
-      (Number(data.primary.enrolment.bs3_boys) || 0) +
-      (Number(data.primary.enrolment.bs4_boys) || 0) +
-      (Number(data.primary.enrolment.bs5_boys) || 0) +
-      (Number(data.primary.enrolment.bs6_boys) || 0);
-    primaryGirls =
-      (Number(data.primary.enrolment.bs1_girls) || 0) +
-      (Number(data.primary.enrolment.bs2_girls) || 0) +
-      (Number(data.primary.enrolment.bs3_girls) || 0) +
-      (Number(data.primary.enrolment.bs4_girls) || 0) +
-      (Number(data.primary.enrolment.bs5_girls) || 0) +
-      (Number(data.primary.enrolment.bs6_girls) || 0);
-  }
-
-  let jhsBoys = 0, jhsGirls = 0;
-  if (levels.includes('jhs')) {
-    jhsBoys =
-      (Number(data.jhs.enrolment.jhs1_boys) || 0) +
-      (Number(data.jhs.enrolment.jhs2_boys) || 0) +
-      (Number(data.jhs.enrolment.jhs3_boys) || 0);
-    jhsGirls =
-      (Number(data.jhs.enrolment.jhs1_girls) || 0) +
-      (Number(data.jhs.enrolment.jhs2_girls) || 0) +
-      (Number(data.jhs.enrolment.jhs3_girls) || 0);
-  }
-
-  const grandTotalBoys = crecheBoys + kgBoys + primaryBoys + jhsBoys;
-  const grandTotalGirls = crecheGirls + kgGirls + primaryGirls + jhsGirls;
-  const grandTotalPupils = grandTotalBoys + grandTotalGirls;
+  const grandTotalBoys = schoolTotals.grandTotalBoys;
+  const grandTotalGirls = schoolTotals.grandTotalGirls;
+  const grandTotalPupils = schoolTotals.grandTotalPupils;
 
   // Teachers calculations
   let trainedTeachers = 0;

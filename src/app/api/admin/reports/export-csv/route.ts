@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     const { data: submissions } = await supabase
       .from('submissions')
-      .select('*')
+      .select('*, enrolment(*)')
       .eq('round_id', activeRound?.id || '00000000-0000-0000-0000-000000000000');
 
     const subMap = new Map<string, any>();
@@ -79,9 +79,22 @@ export async function GET(request: NextRequest) {
         'Total Teachers',
         'Male Teachers',
         'Female Teachers',
+        'Total Boys',
+        'Total Girls',
+        'Grand Total Pupils',
       ];
       const rows = (schools || []).map((s) => {
         const sub = subMap.get(s.id);
+
+        let totBoys = 0;
+        let totGirls = 0;
+        sub?.enrolment?.forEach((e: any) => {
+          if (e.age_band === 'all') {
+            if (e.gender === 'male') totBoys += e.count || 0;
+            if (e.gender === 'female') totGirls += e.count || 0;
+          }
+        });
+
         return [
           `"${s.school_login_id}"`,
           `"${s.name}"`,
@@ -95,6 +108,9 @@ export async function GET(request: NextRequest) {
           sub?.total_teachers || 0,
           sub?.male_teachers || 0,
           sub?.female_teachers || 0,
+          totBoys,
+          totGirls,
+          totBoys + totGirls,
         ].join(',');
       });
 

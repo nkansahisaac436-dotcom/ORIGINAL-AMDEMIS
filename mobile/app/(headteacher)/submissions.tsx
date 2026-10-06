@@ -38,7 +38,8 @@ export default function HeadteacherSubmissionsScreen() {
         .single();
 
       if (!profile?.school_id) return;
-      setSchool(profile.schools);
+      const sch: any = profile.schools;
+      setSchool(sch);
 
       const { data: list } = await supabase
         .from('submissions')

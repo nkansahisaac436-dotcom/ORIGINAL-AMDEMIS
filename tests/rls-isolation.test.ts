@@ -26,7 +26,7 @@ describe('AMDEMIS Security & School Isolation Rules', () => {
 
     it('should reject non-6-digit PINs', () => {
       const invalid = {
-        school_login_id: 'AMD-0001',
+        school_login_id: 'AMD-0042',
         pin: '1234', // Only 4 digits
       };
       const parsed = headteacherLoginSchema.safeParse(invalid);

@@ -5,6 +5,7 @@ import { FormWizardState } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Users, GraduationCap, Armchair, AlertCircle, CheckCircle2, Languages } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { getJHSTotals } from '@/lib/enrolment-totals';
 
 interface StepJHSProps {
   formData: FormWizardState;
@@ -14,6 +15,7 @@ interface StepJHSProps {
 
 export function StepJHS({ formData, updateJHS, errors = {} }: StepJHSProps) {
   const j = formData.jhs;
+  const jhsTotals = getJHSTotals(j.enrolment);
 
   const handleEnrolmentChange = (field: keyof FormWizardState['jhs']['enrolment'], val: string) => {
     updateJHS({
@@ -73,16 +75,16 @@ export function StepJHS({ formData, updateJHS, errors = {} }: StepJHSProps) {
   };
 
   // Calculations
-  const jhs1B = Number(j.enrolment.jhs1_boys) || 0;
-  const jhs1G = Number(j.enrolment.jhs1_girls) || 0;
-  const jhs2B = Number(j.enrolment.jhs2_boys) || 0;
-  const jhs2G = Number(j.enrolment.jhs2_girls) || 0;
-  const jhs3B = Number(j.enrolment.jhs3_boys) || 0;
-  const jhs3G = Number(j.enrolment.jhs3_girls) || 0;
+  const jhs1B = jhsTotals.jhs1.boys;
+  const jhs1G = jhsTotals.jhs1.girls;
+  const jhs2B = jhsTotals.jhs2.boys;
+  const jhs2G = jhsTotals.jhs2.girls;
+  const jhs3B = jhsTotals.jhs3.boys;
+  const jhs3G = jhsTotals.jhs3.girls;
 
-  const totalJHSBoys = jhs1B + jhs2B + jhs3B;
-  const totalJHSGirls = jhs1G + jhs2G + jhs3G;
-  const grandTotalJHS = totalJHSBoys + totalJHSGirls;
+  const totalJHSBoys = jhsTotals.boys;
+  const totalJHSGirls = jhsTotals.girls;
+  const grandTotalJHS = jhsTotals.total;
 
   // Teacher balance check
   const totalJHSTeachers = Number(j.total_jhs_teachers) || 0;
@@ -103,7 +105,7 @@ export function StepJHS({ formData, updateJHS, errors = {} }: StepJHSProps) {
   return (
     <div className="space-y-6">
       {/* 1. JHS Enrolment */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
           <Users className="h-4 w-4 text-rose-600 dark:text-rose-400" />
           <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">
@@ -112,16 +114,12 @@ export function StepJHS({ formData, updateJHS, errors = {} }: StepJHSProps) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-xs uppercase text-brand-navy dark:text-rose-300">
-                Class JHS 1
-              </span>
-              <span className="text-[11px] text-muted-foreground font-semibold">
-                Total: {jhs1B + jhs1G}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
+          {/* JHS1 */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2.5">
+            <span className="font-bold text-xs uppercase text-brand-navy dark:text-rose-300">
+              Class JHS 1
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
               <Input
                 label="Boys"
                 required
@@ -142,19 +140,26 @@ export function StepJHS({ formData, updateJHS, errors = {} }: StepJHSProps) {
                 onChange={(e) => handleEnrolmentChange('jhs1_girls', e.target.value)}
                 error={errors['jhs.enrolment.jhs1_girls']}
               />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-blue-900 dark:text-blue-300">
+                  JHS1 Total
+                </label>
+                <div
+                  className="flex h-10 items-center justify-center rounded-md border border-blue-200 bg-blue-50/90 dark:bg-blue-950/50 dark:border-blue-800 px-3 py-2 font-mono text-base font-bold text-blue-900 dark:text-blue-200 shadow-xs select-none"
+                  aria-label="JHS1 Total"
+                >
+                  {jhsTotals.jhs1.total}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-xs uppercase text-brand-navy dark:text-rose-300">
-                Class JHS 2
-              </span>
-              <span className="text-[11px] text-muted-foreground font-semibold">
-                Total: {jhs2B + jhs2G}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
+          {/* JHS2 */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2.5">
+            <span className="font-bold text-xs uppercase text-brand-navy dark:text-rose-300">
+              Class JHS 2
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
               <Input
                 label="Boys"
                 required
@@ -175,19 +180,26 @@ export function StepJHS({ formData, updateJHS, errors = {} }: StepJHSProps) {
                 onChange={(e) => handleEnrolmentChange('jhs2_girls', e.target.value)}
                 error={errors['jhs.enrolment.jhs2_girls']}
               />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-blue-900 dark:text-blue-300">
+                  JHS2 Total
+                </label>
+                <div
+                  className="flex h-10 items-center justify-center rounded-md border border-blue-200 bg-blue-50/90 dark:bg-blue-950/50 dark:border-blue-800 px-3 py-2 font-mono text-base font-bold text-blue-900 dark:text-blue-200 shadow-xs select-none"
+                  aria-label="JHS2 Total"
+                >
+                  {jhsTotals.jhs2.total}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-xs uppercase text-brand-navy dark:text-rose-300">
-                Class JHS 3
-              </span>
-              <span className="text-[11px] text-muted-foreground font-semibold">
-                Total: {jhs3B + jhs3G}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
+          {/* JHS3 */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2.5">
+            <span className="font-bold text-xs uppercase text-brand-navy dark:text-rose-300">
+              Class JHS 3
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
               <Input
                 label="Boys"
                 required
@@ -208,13 +220,25 @@ export function StepJHS({ formData, updateJHS, errors = {} }: StepJHSProps) {
                 onChange={(e) => handleEnrolmentChange('jhs3_girls', e.target.value)}
                 error={errors['jhs.enrolment.jhs3_girls']}
               />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-blue-900 dark:text-blue-300">
+                  JHS3 Total
+                </label>
+                <div
+                  className="flex h-10 items-center justify-center rounded-md border border-blue-200 bg-blue-50/90 dark:bg-blue-950/50 dark:border-blue-800 px-3 py-2 font-mono text-base font-bold text-blue-900 dark:text-blue-200 shadow-xs select-none"
+                  aria-label="JHS3 Total"
+                >
+                  {jhsTotals.jhs3.total}
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="p-3 bg-rose-50 dark:bg-rose-950/40 rounded-lg text-xs font-semibold text-rose-900 dark:text-rose-200 flex justify-between">
-          <span>Total JHS Boys: {totalJHSBoys} | Total JHS Girls: {totalJHSGirls}</span>
-          <span className="font-bold">Grand Total JHS: {grandTotalJHS} Pupils</span>
+        <div className="p-3 bg-blue-50/80 dark:bg-blue-950/40 rounded-xl border border-blue-200/80 dark:border-blue-800 text-xs font-semibold text-blue-950 dark:text-blue-200 flex flex-wrap items-center justify-between gap-2">
+          <span>Total Boys: <strong className="font-bold text-blue-900 dark:text-blue-100">{jhsTotals.boys}</strong></span>
+          <span>Total Girls: <strong className="font-bold text-blue-900 dark:text-blue-100">{jhsTotals.girls}</strong></span>
+          <span className="font-bold text-blue-900 dark:text-blue-100">Total Pupils: {jhsTotals.total}</span>
         </div>
       </div>
 

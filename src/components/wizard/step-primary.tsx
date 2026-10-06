@@ -4,6 +4,7 @@ import * as React from 'react';
 import { FormWizardState } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Users, GraduationCap, Armchair, AlertCircle, CheckCircle2, UserCheck } from 'lucide-react';
+import { getPrimaryTotals } from '@/lib/enrolment-totals';
 
 interface StepPrimaryProps {
   formData: FormWizardState;
@@ -13,6 +14,7 @@ interface StepPrimaryProps {
 
 export function StepPrimary({ formData, updatePrimary, errors = {} }: StepPrimaryProps) {
   const p = formData.primary;
+  const primaryTotals = getPrimaryTotals(p.enrolment);
 
   const handleEnrolmentChange = (field: keyof FormWizardState['primary']['enrolment'], val: string) => {
     updatePrimary({
@@ -98,12 +100,12 @@ export function StepPrimary({ formData, updatePrimary, errors = {} }: StepPrimar
 
   // Enrolment calculations
   const bsClasses = ['bs1', 'bs2', 'bs3', 'bs4', 'bs5', 'bs6'] as const;
-  const boysPerClass = bsClasses.map((c) => Number(p.enrolment[`${c}_boys`]) || 0);
-  const girlsPerClass = bsClasses.map((c) => Number(p.enrolment[`${c}_girls`]) || 0);
+  const boysPerClass = bsClasses.map((c) => primaryTotals[c].boys);
+  const girlsPerClass = bsClasses.map((c) => primaryTotals[c].girls);
 
-  const totalPrimaryBoys = boysPerClass.reduce((a, b) => a + b, 0);
-  const totalPrimaryGirls = girlsPerClass.reduce((a, b) => a + b, 0);
-  const grandTotalPrimary = totalPrimaryBoys + totalPrimaryGirls;
+  const totalPrimaryBoys = primaryTotals.boys;
+  const totalPrimaryGirls = primaryTotals.girls;
+  const grandTotalPrimary = primaryTotals.total;
 
   // Teacher totals check
   const totalPerClassTeachers =
@@ -145,7 +147,7 @@ export function StepPrimary({ formData, updatePrimary, errors = {} }: StepPrimar
   return (
     <div className="space-y-6">
       {/* 1. Primary Enrolment by Class BS1 - BS6 */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
           <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">
@@ -154,20 +156,15 @@ export function StepPrimary({ formData, updatePrimary, errors = {} }: StepPrimar
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {bsClasses.map((clsName, idx) => (
+          {bsClasses.map((clsName) => (
             <div
               key={clsName}
-              className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2"
+              className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2.5"
             >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs uppercase text-brand-navy dark:text-amber-300">
-                  Class {clsName.toUpperCase()}
-                </span>
-                <span className="text-[11px] text-muted-foreground font-semibold">
-                  Total: {boysPerClass[idx] + girlsPerClass[idx]}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
+              <span className="font-bold text-xs uppercase text-brand-navy dark:text-amber-300">
+                Class {clsName.toUpperCase()}
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
                 <Input
                   label="Boys"
                   required
@@ -188,14 +185,26 @@ export function StepPrimary({ formData, updatePrimary, errors = {} }: StepPrimar
                   onChange={(e) => handleEnrolmentChange(`${clsName}_girls`, e.target.value)}
                   error={errors[`primary.enrolment.${clsName}_girls`]}
                 />
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-blue-900 dark:text-blue-300">
+                    {clsName.toUpperCase()} Total
+                  </label>
+                  <div
+                    className="flex h-10 items-center justify-center rounded-md border border-blue-200 bg-blue-50/90 dark:bg-blue-950/50 dark:border-blue-800 px-3 py-2 font-mono text-base font-bold text-blue-900 dark:text-blue-200 shadow-xs select-none"
+                    aria-label={`${clsName.toUpperCase()} Total`}
+                  >
+                    {primaryTotals[clsName].total}
+                  </div>
+                </div>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-lg text-xs font-semibold text-amber-900 dark:text-amber-200 flex justify-between">
-          <span>Total Primary Boys: {totalPrimaryBoys} | Total Primary Girls: {totalPrimaryGirls}</span>
-          <span className="font-bold">Grand Total Primary: {grandTotalPrimary} Pupils</span>
+        <div className="p-3 bg-blue-50/80 dark:bg-blue-950/40 rounded-xl border border-blue-200/80 dark:border-blue-800 text-xs font-semibold text-blue-950 dark:text-blue-200 flex flex-wrap items-center justify-between gap-2">
+          <span>Total Boys: <strong className="font-bold text-blue-900 dark:text-blue-100">{primaryTotals.boys}</strong></span>
+          <span>Total Girls: <strong className="font-bold text-blue-900 dark:text-blue-100">{primaryTotals.girls}</strong></span>
+          <span className="font-bold text-blue-900 dark:text-blue-100">Total Pupils: {primaryTotals.total}</span>
         </div>
       </div>
 

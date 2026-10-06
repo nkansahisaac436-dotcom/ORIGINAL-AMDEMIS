@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { DEMO_ACCOUNTS, getDemoSession } from '../../src/lib/demo-data';
 import { supabase } from '../../src/lib/supabase';
 import { THEME } from '../../src/lib/theme';
 
@@ -34,30 +33,14 @@ export default function AdminDashboardScreen() {
 
   const loadAdminStats = async () => {
     try {
-      // 1. Check demo session
-      const demo = await getDemoSession();
-      if (demo?.role === 'super_admin') {
-        setActiveRound(DEMO_ACCOUNTS.activeRound);
-        setStats({
-          totalSchools: 24,
-          totalCircuits: 3,
-          submittedCount: 18,
-          draftCount: 4,
-          completionRate: 75,
-        });
-        setLoading(false);
-        setRefreshing(false);
-        return;
-      }
-
-      // 2. Query active round from Supabase
+      // 1. Query active round from Supabase
       const { data: round } = await supabase
         .from('rounds')
         .select('*')
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
-      setActiveRound(round || DEMO_ACCOUNTS.activeRound);
+      setActiveRound(round || null);
 
       // Counts
       const { count: schoolsCount } = await supabase
@@ -90,27 +73,18 @@ export default function AdminDashboardScreen() {
         draft = drfCount || 0;
       }
 
-      const total = schoolsCount || 2;
+      const total = schoolsCount || 0;
       const rate = total > 0 ? Math.round((submitted / total) * 100) : 0;
 
       setStats({
         totalSchools: total,
-        totalCircuits: circuitsCount || 3,
+        totalCircuits: circuitsCount || 0,
         submittedCount: submitted,
         draftCount: draft,
         completionRate: rate,
       });
     } catch (err) {
       console.error('Error loading admin stats:', err);
-      // Demo Fallback
-      setActiveRound(DEMO_ACCOUNTS.activeRound);
-      setStats({
-        totalSchools: 24,
-        totalCircuits: 3,
-        submittedCount: 18,
-        draftCount: 4,
-        completionRate: 75,
-      });
     } finally {
       setLoading(false);
       setRefreshing(false);

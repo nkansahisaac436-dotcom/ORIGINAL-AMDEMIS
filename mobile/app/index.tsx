@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -15,7 +14,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { DEMO_ACCOUNTS, setDemoSession } from '../src/lib/demo-data';
 import { supabase } from '../src/lib/supabase';
 import { THEME } from '../src/lib/theme';
 
@@ -53,24 +51,6 @@ export default function IndexScreen() {
 
     setLoading(true);
 
-    // 1. Check if matching demo accounts first for instant offline access
-    const matchedDemo = DEMO_ACCOUNTS.headteachers.find(
-      (h) => h.loginId.toUpperCase() === cleanId && h.pin === cleanPin
-    );
-
-    if (matchedDemo) {
-      await setDemoSession({
-        role: 'headteacher',
-        school: matchedDemo.school,
-        user: { id: `demo-user-${matchedDemo.loginId}`, email: `${matchedDemo.loginId.toLowerCase()}@amdemis.local` },
-      });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setLoading(false);
-      router.replace('/(headteacher)/dashboard');
-      return;
-    }
-
-    // 2. Query live Supabase Auth
     try {
       const syntheticEmail = `${cleanId.toLowerCase()}@amdemis.local`;
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -91,6 +71,7 @@ export default function IndexScreen() {
           .eq('id', data.user.id)
           .single();
 
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         if (profile?.role === 'headteacher') {
           router.replace('/(headteacher)/dashboard');
         } else {
@@ -116,23 +97,6 @@ export default function IndexScreen() {
 
     setLoading(true);
 
-    // 1. Check demo admin account for instant access
-    if (
-      cleanEmail === DEMO_ACCOUNTS.admin.email.toLowerCase() &&
-      cleanPass === DEMO_ACCOUNTS.admin.password
-    ) {
-      await setDemoSession({
-        role: 'super_admin',
-        user: { id: DEMO_ACCOUNTS.admin.profile.id, email: DEMO_ACCOUNTS.admin.email },
-        profile: DEMO_ACCOUNTS.admin.profile,
-      });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setLoading(false);
-      router.replace('/(admin)/dashboard');
-      return;
-    }
-
-    // 2. Query live Supabase Auth
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
@@ -146,6 +110,7 @@ export default function IndexScreen() {
       }
 
       if (data.user) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace('/(admin)/dashboard');
       }
     } catch (err: any) {
@@ -153,20 +118,6 @@ export default function IndexScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const quickFillHT = (id: string, p: string) => {
-    setLoginId(id);
-    setPin(p);
-    setErrorMsg('');
-    Haptics.selectionAsync();
-  };
-
-  const quickFillAdmin = () => {
-    setEmail(DEMO_ACCOUNTS.admin.email);
-    setPassword(DEMO_ACCOUNTS.admin.password);
-    setErrorMsg('');
-    Haptics.selectionAsync();
   };
 
   return (
@@ -246,7 +197,7 @@ export default function IndexScreen() {
                   <Text style={styles.label}>SCHOOL LOGIN ID</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="AMD-0001"
+                    placeholder="AMD-0042"
                     placeholderTextColor={THEME.colors.textLight}
                     value={loginId}
                     onChangeText={(txt) => setLoginId(txt.toUpperCase())}
@@ -286,25 +237,6 @@ export default function IndexScreen() {
                     <Text style={styles.submitBtnText}>Sign in as Headteacher</Text>
                   )}
                 </TouchableOpacity>
-
-                {/* 1-Tap Quick Test Buttons */}
-                <View style={styles.quickTestBox}>
-                  <Text style={styles.quickTestTitle}>⚡ 1-Tap Demo Test Accounts:</Text>
-                  <View style={styles.quickBtnRow}>
-                    <TouchableOpacity
-                      style={styles.quickBtn}
-                      onPress={() => quickFillHT('AMD-0001', '123456')}
-                    >
-                      <Text style={styles.quickBtnText}>Nyinahin Basic (AMD-0001)</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.quickBtn}
-                      onPress={() => quickFillHT('AMD-0002', '654321')}
-                    >
-                      <Text style={styles.quickBtnText}>Mpasatia JHS (AMD-0002)</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
               </View>
             ) : (
               <View style={styles.formBody}>
@@ -318,7 +250,7 @@ export default function IndexScreen() {
                   <Text style={styles.label}>OFFICIAL EMAIL</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="admin@amdemis.gov.gh"
+                    placeholder="officer@amdemis.local"
                     placeholderTextColor={THEME.colors.textLight}
                     value={email}
                     onChangeText={setEmail}
@@ -357,14 +289,6 @@ export default function IndexScreen() {
                     <Text style={styles.submitBtnText}>Sign in as Administrator</Text>
                   )}
                 </TouchableOpacity>
-
-                {/* 1-Tap Admin Quick Fill */}
-                <View style={styles.quickTestBox}>
-                  <Text style={styles.quickTestTitle}>⚡ 1-Tap Admin Demo:</Text>
-                  <TouchableOpacity style={styles.quickBtn} onPress={quickFillAdmin}>
-                    <Text style={styles.quickBtnText}>Fill Admin: admin@amdemis.gov.gh</Text>
-                  </TouchableOpacity>
-                </View>
               </View>
             )}
           </View>
@@ -460,36 +384,36 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
   },
   errorBox: {
     backgroundColor: THEME.colors.errorBg,
-    borderColor: THEME.colors.error,
-    borderWidth: 1,
+    padding: 12,
     borderRadius: 8,
-    padding: 10,
-    marginBottom: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FDA29B',
   },
   errorText: {
     color: THEME.colors.error,
     fontSize: 13,
-    textAlign: 'center',
+    fontWeight: '500',
   },
-  formBody: {},
+  formBody: {
+    gap: 16,
+  },
   formTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: THEME.colors.text,
-    marginBottom: 4,
+    color: THEME.colors.navy,
   },
   formSub: {
     fontSize: 13,
     color: THEME.colors.textMuted,
-    marginBottom: 16,
     lineHeight: 18,
+    marginTop: -8,
   },
   inputGroup: {
-    marginBottom: 14,
+    gap: 6,
   },
   labelRow: {
     flexDirection: 'row',
@@ -531,38 +455,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: 'bold',
-  },
-  quickTestBox: {
-    marginTop: 20,
-    padding: 12,
-    backgroundColor: '#F0F5FF',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#D0E1FD',
-  },
-  quickTestTitle: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: THEME.colors.navy,
-    marginBottom: 8,
-  },
-  quickBtnRow: {
-    flexDirection: 'column',
-    gap: 6,
-  },
-  quickBtn: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    alignItems: 'center',
-  },
-  quickBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: THEME.colors.midBlue,
   },
   footerNote: {
     fontSize: 11,

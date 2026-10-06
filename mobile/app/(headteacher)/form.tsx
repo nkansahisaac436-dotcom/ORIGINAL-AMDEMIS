@@ -17,11 +17,19 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { DEMO_ACCOUNTS, getDemoSession } from '../../src/lib/demo-data';
 import { EDUCATION_LEVELS, LevelKey } from '../../src/lib/levels-config';
 import { generateAndShareReceipt } from '../../src/lib/pdf-generator';
 import { supabase } from '../../src/lib/supabase';
 import { THEME } from '../../src/lib/theme';
+import {
+  getClassTotal,
+  getCrecheTotals,
+  getKGTotals,
+  getPrimaryTotals,
+  getJHSTotals,
+  getSchoolTotals,
+  safeNumber,
+} from '../../src/lib/enrolment-totals';
 
 export default function HeadteacherFormScreen() {
   const router = useRouter();
@@ -102,34 +110,11 @@ export default function HeadteacherFormScreen() {
 
   const loadFormContext = async () => {
     try {
-      // 1. Check Demo Session
-      const demo = await getDemoSession();
-      if (demo?.school) {
-        setSchool(demo.school);
-        setHeadteacherName(demo.school.headteacher_name || '');
-        setPhone(demo.school.headteacher_phone || '');
-        setEmisCode(demo.school.emis_code || '');
-        setRound(DEMO_ACCOUNTS.activeRound);
-        if (demo.school.levels && demo.school.levels.length > 0) {
-          setChosenLevels(demo.school.levels);
-        }
-        // Check local cache
-        const localCache = await AsyncStorage.getItem(`amdemis_form_${demo.school.id}_demo`);
-        if (localCache) {
-          populateFormData(JSON.parse(localCache));
-        }
-        setLoading(false);
-        return;
-      }
-
-      // 2. Query Supabase
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        setSchool(DEMO_ACCOUNTS.headteachers[0].school);
-        setRound(DEMO_ACCOUNTS.activeRound);
-        setLoading(false);
+        router.replace('/');
         return;
       }
 
@@ -139,19 +124,24 @@ export default function HeadteacherFormScreen() {
         .eq('id', user.id)
         .single();
 
-      if (!profile?.school_id) return;
-      setSchool(profile.schools);
-      setHeadteacherName(profile.schools.headteacher_name || '');
-      setPhone(profile.schools.headteacher_phone || '');
-      setEmisCode(profile.schools.emis_code || '');
+      if (!profile?.school_id) {
+        setLoading(false);
+        return;
+      }
+
+      const schoolData: any = profile.schools;
+      setSchool(schoolData);
+      setHeadteacherName(schoolData?.headteacher_name || '');
+      setPhone(schoolData?.headteacher_phone || '');
+      setEmisCode(schoolData?.emis_code || '');
 
       const { data: activeRound } = await supabase
         .from('rounds')
         .select('*')
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
-      setRound(activeRound || DEMO_ACCOUNTS.activeRound);
+      setRound(activeRound || null);
 
       if (activeRound) {
         const { data: sub } = await supabase
@@ -159,7 +149,7 @@ export default function HeadteacherFormScreen() {
           .select('*, submission_levels(level_key)')
           .eq('round_id', activeRound.id)
           .eq('school_id', profile.school_id)
-          .single();
+          .maybeSingle();
 
         if (sub) {
           setSubmissionId(sub.id);
@@ -170,13 +160,14 @@ export default function HeadteacherFormScreen() {
             populateFormData(sub.form_data);
           }
         } else {
+          // V2 cache key to clear out legacy demo drafts
           const localCache = await AsyncStorage.getItem(
-            `amdemis_form_${profile.school_id}_${activeRound.id}`
+            `amdemis_v2_form_${profile.school_id}_${activeRound.id}`
           );
           if (localCache) {
             populateFormData(JSON.parse(localCache));
-          } else if (profile.schools.levels && profile.schools.levels.length > 0) {
-            setChosenLevels(profile.schools.levels);
+          } else if (schoolData?.default_levels && schoolData.default_levels.length > 0) {
+            setChosenLevels(schoolData.default_levels);
           }
         }
       }
@@ -189,54 +180,54 @@ export default function HeadteacherFormScreen() {
 
   const populateFormData = (data: any) => {
     if (data.levels) setChosenLevels(data.levels);
-    if (data.teachersMaleTrained) setTeachersMaleTrained(String(data.teachersMaleTrained));
-    if (data.teachersMaleUntrained) setTeachersMaleUntrained(String(data.teachersMaleUntrained));
-    if (data.teachersFemaleTrained) setTeachersFemaleTrained(String(data.teachersFemaleTrained));
-    if (data.teachersFemaleUntrained) setTeachersFemaleUntrained(String(data.teachersFemaleUntrained));
+    if (data.teachersMaleTrained !== undefined) setTeachersMaleTrained(String(data.teachersMaleTrained));
+    if (data.teachersMaleUntrained !== undefined) setTeachersMaleUntrained(String(data.teachersMaleUntrained));
+    if (data.teachersFemaleTrained !== undefined) setTeachersFemaleTrained(String(data.teachersFemaleTrained));
+    if (data.teachersFemaleUntrained !== undefined) setTeachersFemaleUntrained(String(data.teachersFemaleUntrained));
 
     // Creche
-    if (data.crecheBoys) setCrecheBoys(String(data.crecheBoys));
-    if (data.crecheGirls) setCrecheGirls(String(data.crecheGirls));
-    if (data.crecheTeachers) setCrecheTeachers(String(data.crecheTeachers));
+    if (data.crecheBoys !== undefined) setCrecheBoys(String(data.crecheBoys));
+    if (data.crecheGirls !== undefined) setCrecheGirls(String(data.crecheGirls));
+    if (data.crecheTeachers !== undefined) setCrecheTeachers(String(data.crecheTeachers));
 
     // KG
-    if (data.kg1Boys) setKg1Boys(String(data.kg1Boys));
-    if (data.kg1Girls) setKg1Girls(String(data.kg1Girls));
-    if (data.kg2Boys) setKg2Boys(String(data.kg2Boys));
-    if (data.kg2Girls) setKg2Girls(String(data.kg2Girls));
-    if (data.kgTeachers) setKgTeachers(String(data.kgTeachers));
+    if (data.kg1Boys !== undefined) setKg1Boys(String(data.kg1Boys));
+    if (data.kg1Girls !== undefined) setKg1Girls(String(data.kg1Girls));
+    if (data.kg2Boys !== undefined) setKg2Boys(String(data.kg2Boys));
+    if (data.kg2Girls !== undefined) setKg2Girls(String(data.kg2Girls));
+    if (data.kgTeachers !== undefined) setKgTeachers(String(data.kgTeachers));
 
     // Primary
-    if (data.p1Boys) setP1Boys(String(data.p1Boys));
-    if (data.p1Girls) setP1Girls(String(data.p1Girls));
-    if (data.p2Boys) setP2Boys(String(data.p2Boys));
-    if (data.p2Girls) setP2Girls(String(data.p2Girls));
-    if (data.p3Boys) setP3Boys(String(data.p3Boys));
-    if (data.p3Girls) setP3Girls(String(data.p3Girls));
-    if (data.p4Boys) setP4Boys(String(data.p4Boys));
-    if (data.p4Girls) setP4Girls(String(data.p4Girls));
-    if (data.p5Boys) setP5Boys(String(data.p5Boys));
-    if (data.p5Girls) setP5Girls(String(data.p5Girls));
-    if (data.p6Boys) setP6Boys(String(data.p6Boys));
-    if (data.p6Girls) setP6Girls(String(data.p6Girls));
-    if (data.primaryTeachers) setPrimaryTeachers(String(data.primaryTeachers));
+    if (data.p1Boys !== undefined) setP1Boys(String(data.p1Boys));
+    if (data.p1Girls !== undefined) setP1Girls(String(data.p1Girls));
+    if (data.p2Boys !== undefined) setP2Boys(String(data.p2Boys));
+    if (data.p2Girls !== undefined) setP2Girls(String(data.p2Girls));
+    if (data.p3Boys !== undefined) setP3Boys(String(data.p3Boys));
+    if (data.p3Girls !== undefined) setP3Girls(String(data.p3Girls));
+    if (data.p4Boys !== undefined) setP4Boys(String(data.p4Boys));
+    if (data.p4Girls !== undefined) setP4Girls(String(data.p4Girls));
+    if (data.p5Boys !== undefined) setP5Boys(String(data.p5Boys));
+    if (data.p5Girls !== undefined) setP5Girls(String(data.p5Girls));
+    if (data.p6Boys !== undefined) setP6Boys(String(data.p6Boys));
+    if (data.p6Girls !== undefined) setP6Girls(String(data.p6Girls));
+    if (data.primaryTeachers !== undefined) setPrimaryTeachers(String(data.primaryTeachers));
 
     // JHS
-    if (data.jhs1Boys) setJhs1Boys(String(data.jhs1Boys));
-    if (data.jhs1Girls) setJhs1Girls(String(data.jhs1Girls));
-    if (data.jhs2Boys) setJhs2Boys(String(data.jhs2Boys));
-    if (data.jhs2Girls) setJhs2Girls(String(data.jhs2Girls));
-    if (data.jhs3Boys) setJhs3Boys(String(data.jhs3Boys));
-    if (data.jhs3Girls) setJhs3Girls(String(data.jhs3Girls));
-    if (data.jhsTeachers) setJhsTeachers(String(data.jhsTeachers));
+    if (data.jhs1Boys !== undefined) setJhs1Boys(String(data.jhs1Boys));
+    if (data.jhs1Girls !== undefined) setJhs1Girls(String(data.jhs1Girls));
+    if (data.jhs2Boys !== undefined) setJhs2Boys(String(data.jhs2Boys));
+    if (data.jhs2Girls !== undefined) setJhs2Girls(String(data.jhs2Girls));
+    if (data.jhs3Boys !== undefined) setJhs3Boys(String(data.jhs3Boys));
+    if (data.jhs3Girls !== undefined) setJhs3Girls(String(data.jhs3Girls));
+    if (data.jhsTeachers !== undefined) setJhsTeachers(String(data.jhsTeachers));
 
     // Infrastructure
-    if (data.permClassrooms) setPermClassrooms(String(data.permClassrooms));
-    if (data.goodClassrooms) setGoodClassrooms(String(data.goodClassrooms));
-    if (data.dilapClassrooms) setDilapClassrooms(String(data.dilapClassrooms));
-    if (data.tempClassrooms) setTempClassrooms(String(data.tempClassrooms));
-    if (data.singleDesks) setSingleDesks(String(data.singleDesks));
-    if (data.dualDesks) setDualDesks(String(data.dualDesks));
+    if (data.permClassrooms !== undefined) setPermClassrooms(String(data.permClassrooms));
+    if (data.goodClassrooms !== undefined) setGoodClassrooms(String(data.goodClassrooms));
+    if (data.dilapClassrooms !== undefined) setDilapClassrooms(String(data.dilapClassrooms));
+    if (data.tempClassrooms !== undefined) setTempClassrooms(String(data.tempClassrooms));
+    if (data.singleDesks !== undefined) setSingleDesks(String(data.singleDesks));
+    if (data.dualDesks !== undefined) setDualDesks(String(data.dualDesks));
     if (data.hasWater !== undefined) setHasWater(data.hasWater);
     if (data.hasToilet !== undefined) setHasToilet(data.hasToilet);
     if (data.hasElectricity !== undefined) setHasElectricity(data.hasElectricity);
@@ -309,58 +300,68 @@ export default function HeadteacherFormScreen() {
   steps.push({ id: 'infra', title: 'Infrastructure & WASH', short: 'Facilities' });
   steps.push({ id: 'review', title: 'Review & Submit', short: 'Review' });
 
-  // Math Computations
+  // Math Computations using shared totals helper
+  const crecheTotals = getCrecheTotals({ boys: crecheBoys, girls: crecheGirls });
+  const kgTotals = getKGTotals({
+    kg1_boys: kg1Boys,
+    kg1_girls: kg1Girls,
+    kg2_boys: kg2Boys,
+    kg2_girls: kg2Girls,
+  });
+  const primaryTotals = getPrimaryTotals({
+    bs1_boys: p1Boys,
+    bs1_girls: p1Girls,
+    bs2_boys: p2Boys,
+    bs2_girls: p2Girls,
+    bs3_boys: p3Boys,
+    bs3_girls: p3Girls,
+    bs4_boys: p4Boys,
+    bs4_girls: p4Girls,
+    bs5_boys: p5Boys,
+    bs5_girls: p5Girls,
+    bs6_boys: p6Boys,
+    bs6_girls: p6Girls,
+  });
+  const jhsTotals = getJHSTotals({
+    jhs1_boys: jhs1Boys,
+    jhs1_girls: jhs1Girls,
+    jhs2_boys: jhs2Boys,
+    jhs2_girls: jhs2Girls,
+    jhs3_boys: jhs3Boys,
+    jhs3_girls: jhs3Girls,
+  });
+
   const totalBoys =
-    (chosenLevels.includes('creche') ? Number(crecheBoys) || 0 : 0) +
-    (chosenLevels.includes('kg') ? (Number(kg1Boys) || 0) + (Number(kg2Boys) || 0) : 0) +
-    (chosenLevels.includes('primary')
-      ? (Number(p1Boys) || 0) +
-        (Number(p2Boys) || 0) +
-        (Number(p3Boys) || 0) +
-        (Number(p4Boys) || 0) +
-        (Number(p5Boys) || 0) +
-        (Number(p6Boys) || 0)
-      : 0) +
-    (chosenLevels.includes('jhs')
-      ? (Number(jhs1Boys) || 0) + (Number(jhs2Boys) || 0) + (Number(jhs3Boys) || 0)
-      : 0);
+    (chosenLevels.includes('creche') ? crecheTotals.boys : 0) +
+    (chosenLevels.includes('kg') ? kgTotals.boys : 0) +
+    (chosenLevels.includes('primary') ? primaryTotals.boys : 0) +
+    (chosenLevels.includes('jhs') ? jhsTotals.boys : 0);
 
   const totalGirls =
-    (chosenLevels.includes('creche') ? Number(crecheGirls) || 0 : 0) +
-    (chosenLevels.includes('kg') ? (Number(kg1Girls) || 0) + (Number(kg2Girls) || 0) : 0) +
-    (chosenLevels.includes('primary')
-      ? (Number(p1Girls) || 0) +
-        (Number(p2Girls) || 0) +
-        (Number(p3Girls) || 0) +
-        (Number(p4Girls) || 0) +
-        (Number(p5Girls) || 0) +
-        (Number(p6Girls) || 0)
-      : 0) +
-    (chosenLevels.includes('jhs')
-      ? (Number(jhs1Girls) || 0) + (Number(jhs2Girls) || 0) + (Number(jhs3Girls) || 0)
-      : 0);
+    (chosenLevels.includes('creche') ? crecheTotals.girls : 0) +
+    (chosenLevels.includes('kg') ? kgTotals.girls : 0) +
+    (chosenLevels.includes('primary') ? primaryTotals.girls : 0) +
+    (chosenLevels.includes('jhs') ? jhsTotals.girls : 0);
+
+  const grandTotalPupils = totalBoys + totalGirls;
 
   const totalOverallTeachers =
-    (Number(teachersMaleTrained) || 0) +
-    (Number(teachersMaleUntrained) || 0) +
-    (Number(teachersFemaleTrained) || 0) +
-    (Number(teachersFemaleUntrained) || 0);
+    safeNumber(teachersMaleTrained) +
+    safeNumber(teachersMaleUntrained) +
+    safeNumber(teachersFemaleTrained) +
+    safeNumber(teachersFemaleUntrained);
 
   const handleSaveDraft = async () => {
     setSaving(true);
     const payload = getFormPayload();
 
     try {
-      // Local Save
       if (school?.id && round?.id) {
         await AsyncStorage.setItem(
-          `amdemis_form_${school.id}_${round.id}`,
+          `amdemis_v2_form_${school.id}_${round.id}`,
           JSON.stringify(payload)
         );
-      }
 
-      // Supabase Server Save
-      if (school?.id && round?.id) {
         let sid = submissionId;
         if (!sid) {
           const { data: newSub } = await supabase
@@ -391,7 +392,6 @@ export default function HeadteacherFormScreen() {
             .eq('id', sid);
         }
 
-        // Update submission levels
         if (sid) {
           await supabase.from('submission_levels').delete().eq('submission_id', sid);
           const levelRows = chosenLevels.map((l) => ({
@@ -417,8 +417,7 @@ export default function HeadteacherFormScreen() {
       return;
     }
 
-    // Classroom Validation Check: good + dilap <= perm
-    if (Number(goodClassrooms) + Number(dilapClassrooms) > Number(permClassrooms)) {
+    if (safeNumber(goodClassrooms) + safeNumber(dilapClassrooms) > safeNumber(permClassrooms)) {
       Alert.alert(
         'Validation Error',
         `Classrooms in Good Condition (${goodClassrooms}) + In Need of Major Repair (${dilapClassrooms}) exceeds Total Permanent Classrooms (${permClassrooms}).`
@@ -457,7 +456,6 @@ export default function HeadteacherFormScreen() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Offer to download receipt PDF
       Alert.alert(
         'Submission Successful!',
         'Your annual school data has been submitted to the Planning & Statistics Directorate.',
@@ -497,33 +495,21 @@ export default function HeadteacherFormScreen() {
         Alert.alert('Required', 'Your school must select at least one active educational level.');
         return;
       }
-      Alert.alert(
-        'Remove Level',
-        `Are you sure you want to remove ${EDUCATION_LEVELS[key].label}? Data for this level will not be submitted.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: () => {
-              setChosenLevels(chosenLevels.filter((l) => l !== key));
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            },
-          },
-        ]
-      );
+      setChosenLevels(chosenLevels.filter((k) => k !== key));
     } else {
       setChosenLevels([...chosenLevels, key]);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+    Haptics.selectionAsync();
   };
 
   if (loading) {
     return (
-      <View style={styles.centerBox}>
-        <ActivityIndicator size="large" color={THEME.colors.navy} />
-        <Text style={styles.loadingText}>Loading Form Engine...</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerBox}>
+          <ActivityIndicator size="large" color={THEME.colors.navy} />
+          <Text style={styles.loadingText}>Loading EMIS Census Form...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -535,49 +521,35 @@ export default function HeadteacherFormScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        {/* Horizontal Step Indicator */}
+        {/* Horizontal Step Nav */}
         <View style={styles.stepperContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stepperScroll}>
-            {steps.map((s, idx) => {
+            {steps.map((st, idx) => {
               const isCurrent = idx === currentStepIndex;
-              const isCompleted = idx < currentStepIndex;
+              const isDone = idx < currentStepIndex;
               return (
                 <TouchableOpacity
-                  key={s.id}
+                  key={st.id}
                   style={[
                     styles.stepBadge,
                     isCurrent && styles.stepBadgeCurrent,
-                    isCompleted && styles.stepBadgeCompleted,
+                    isDone && styles.stepBadgeCompleted,
                   ]}
                   onPress={() => {
                     setCurrentStepIndex(idx);
                     Haptics.selectionAsync();
                   }}
                 >
-                  <Text
-                    style={[
-                      styles.stepNum,
-                      (isCurrent || isCompleted) && styles.stepNumActive,
-                    ]}
-                  >
-                    {idx + 1}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.stepLabel,
-                      (isCurrent || isCompleted) && styles.stepLabelActive,
-                    ]}
-                  >
-                    {s.short}
-                  </Text>
+                  <Text style={[styles.stepNum, isCurrent && styles.stepNumActive]}>{idx + 1}</Text>
+                  <Text style={[styles.stepLabel, isCurrent && styles.stepLabelActive]}>{st.short}</Text>
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
         </View>
 
-        {/* Step Body */}
         <ScrollView contentContainerStyle={styles.formScroll} keyboardShouldPersistTaps="handled">
+          {/* Active Step Header */}
           <View style={styles.stepHeader}>
             <Text style={styles.stepTitle}>{activeStep.title}</Text>
             <Text style={styles.stepCounter}>
@@ -585,12 +557,12 @@ export default function HeadteacherFormScreen() {
             </Text>
           </View>
 
-          {/* STEP 0: SCHOOL PROFILE & LEVELS */}
+          {/* STEP: SCHOOL DETAILS */}
           {activeStep.id === 'school' && (
             <View style={styles.card}>
-              <Text style={styles.sectionHeading}>Question 0: Educational Levels Run This Year</Text>
+              <Text style={styles.sectionHeading}>Active Educational Levels</Text>
               <Text style={styles.fieldHelp}>
-                Check only the levels operating at your school this academic year.
+                Select the levels operational in your school this academic year:
               </Text>
 
               {Object.values(EDUCATION_LEVELS).map((lvl) => {
@@ -690,9 +662,9 @@ export default function HeadteacherFormScreen() {
           {activeStep.id === 'creche' && (
             <View style={styles.card}>
               <Text style={styles.sectionHeading}>Crèche / Nursery Enrolment</Text>
-              <View style={styles.grid2}>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>Boys Enrolment</Text>
+              <View style={styles.grid3}>
+                <View style={styles.gridItem3}>
+                  <Text style={styles.inputLabel}>Boys</Text>
                   <TextInput
                     style={styles.numInput}
                     value={crecheBoys}
@@ -700,8 +672,8 @@ export default function HeadteacherFormScreen() {
                     keyboardType="number-pad"
                   />
                 </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>Girls Enrolment</Text>
+                <View style={styles.gridItem3}>
+                  <Text style={styles.inputLabel}>Girls</Text>
                   <TextInput
                     style={styles.numInput}
                     value={crecheGirls}
@@ -709,7 +681,22 @@ export default function HeadteacherFormScreen() {
                     keyboardType="number-pad"
                   />
                 </View>
+                <View style={styles.gridItem3}>
+                  <Text style={styles.totalBoxLabel}>Crèche Total</Text>
+                  <View style={styles.classTotalBox}>
+                    <Text style={styles.classTotalNum}>{crecheTotals.total}</Text>
+                  </View>
+                </View>
               </View>
+
+              <View style={styles.levelSummaryRow}>
+                <Text style={styles.levelSummaryText}>Total Boys: <Text style={styles.boldNum}>{crecheTotals.boys}</Text></Text>
+                <Text style={styles.levelSummaryText}>Total Girls: <Text style={styles.boldNum}>{crecheTotals.girls}</Text></Text>
+                <Text style={[styles.levelSummaryText, styles.boldNum]}>Total Pupils: {crecheTotals.total}</Text>
+              </View>
+
+              <View style={styles.divider} />
+
               <View style={styles.inputRow}>
                 <Text style={styles.inputLabel}>Assigned Daycare Teachers / Attendants</Text>
                 <TextInput
@@ -725,50 +712,77 @@ export default function HeadteacherFormScreen() {
           {/* STEP: KG */}
           {activeStep.id === 'kg' && (
             <View style={styles.card}>
-              <Text style={styles.sectionHeading}>Kindergarten Enrolment</Text>
-              <Text style={styles.tableSub}>KG 1</Text>
-              <View style={styles.grid2}>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>KG1 Boys</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={kg1Boys}
-                    onChangeText={setKg1Boys}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>KG1 Girls</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={kg1Girls}
-                    onChangeText={setKg1Girls}
-                    keyboardType="number-pad"
-                  />
+              <Text style={styles.sectionHeading}>Kindergarten Enrolment by Class</Text>
+
+              {/* KG 1 */}
+              <View style={styles.classCard}>
+                <Text style={styles.classCardTitle}>Class KG 1</Text>
+                <View style={styles.grid3}>
+                  <View style={styles.gridItem3}>
+                    <Text style={styles.inputLabel}>KG1 Boys</Text>
+                    <TextInput
+                      style={styles.numInput}
+                      value={kg1Boys}
+                      onChangeText={setKg1Boys}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                  <View style={styles.gridItem3}>
+                    <Text style={styles.inputLabel}>KG1 Girls</Text>
+                    <TextInput
+                      style={styles.numInput}
+                      value={kg1Girls}
+                      onChangeText={setKg1Girls}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                  <View style={styles.gridItem3}>
+                    <Text style={styles.totalBoxLabel}>KG1 Total</Text>
+                    <View style={styles.classTotalBox}>
+                      <Text style={styles.classTotalNum}>{kgTotals.kg1.total}</Text>
+                    </View>
+                  </View>
                 </View>
               </View>
 
-              <Text style={styles.tableSub}>KG 2</Text>
-              <View style={styles.grid2}>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>KG2 Boys</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={kg2Boys}
-                    onChangeText={setKg2Boys}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>KG2 Girls</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={kg2Girls}
-                    onChangeText={setKg2Girls}
-                    keyboardType="number-pad"
-                  />
+              {/* KG 2 */}
+              <View style={styles.classCard}>
+                <Text style={styles.classCardTitle}>Class KG 2</Text>
+                <View style={styles.grid3}>
+                  <View style={styles.gridItem3}>
+                    <Text style={styles.inputLabel}>KG2 Boys</Text>
+                    <TextInput
+                      style={styles.numInput}
+                      value={kg2Boys}
+                      onChangeText={setKg2Boys}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                  <View style={styles.gridItem3}>
+                    <Text style={styles.inputLabel}>KG2 Girls</Text>
+                    <TextInput
+                      style={styles.numInput}
+                      value={kg2Girls}
+                      onChangeText={setKg2Girls}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                  <View style={styles.gridItem3}>
+                    <Text style={styles.totalBoxLabel}>KG2 Total</Text>
+                    <View style={styles.classTotalBox}>
+                      <Text style={styles.classTotalNum}>{kgTotals.kg2.total}</Text>
+                    </View>
+                  </View>
                 </View>
               </View>
+
+              <View style={styles.levelSummaryRow}>
+                <Text style={styles.levelSummaryText}>Total KG Boys: <Text style={styles.boldNum}>{kgTotals.boys}</Text></Text>
+                <Text style={styles.levelSummaryText}>Total KG Girls: <Text style={styles.boldNum}>{kgTotals.girls}</Text></Text>
+                <Text style={[styles.levelSummaryText, styles.boldNum]}>Total KG Pupils: {kgTotals.total}</Text>
+              </View>
+
+              <View style={styles.divider} />
 
               <View style={styles.inputRow}>
                 <Text style={styles.inputLabel}>Assigned KG Teachers</Text>
@@ -785,121 +799,54 @@ export default function HeadteacherFormScreen() {
           {/* STEP: PRIMARY */}
           {activeStep.id === 'primary' && (
             <View style={styles.card}>
-              <Text style={styles.sectionHeading}>Early Primary (BS1 – BS3)</Text>
-              <View style={styles.grid2}>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>BS1 Boys</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={p1Boys}
-                    onChangeText={setP1Boys}
-                    keyboardType="number-pad"
-                  />
+              <Text style={styles.sectionHeading}>Primary School Enrolment (BS1 to BS6)</Text>
+
+              {([
+                { name: 'BS1', b: p1Boys, setB: setP1Boys, g: p1Girls, setG: setP1Girls, tot: primaryTotals.bs1.total },
+                { name: 'BS2', b: p2Boys, setB: setP2Boys, g: p2Girls, setG: setP2Girls, tot: primaryTotals.bs2.total },
+                { name: 'BS3', b: p3Boys, setB: setP3Boys, g: p3Girls, setG: setP3Girls, tot: primaryTotals.bs3.total },
+                { name: 'BS4', b: p4Boys, setB: setP4Boys, g: p4Girls, setG: setP4Girls, tot: primaryTotals.bs4.total },
+                { name: 'BS5', b: p5Boys, setB: setP5Boys, g: p5Girls, setG: setP5Girls, tot: primaryTotals.bs5.total },
+                { name: 'BS6', b: p6Boys, setB: setP6Boys, g: p6Girls, setG: setP6Girls, tot: primaryTotals.bs6.total },
+              ] as const).map((item) => (
+                <View key={item.name} style={styles.classCard}>
+                  <Text style={styles.classCardTitle}>Class {item.name}</Text>
+                  <View style={styles.grid3}>
+                    <View style={styles.gridItem3}>
+                      <Text style={styles.inputLabel}>Boys</Text>
+                      <TextInput
+                        style={styles.numInput}
+                        value={item.b}
+                        onChangeText={item.setB}
+                        keyboardType="number-pad"
+                      />
+                    </View>
+                    <View style={styles.gridItem3}>
+                      <Text style={styles.inputLabel}>Girls</Text>
+                      <TextInput
+                        style={styles.numInput}
+                        value={item.g}
+                        onChangeText={item.setG}
+                        keyboardType="number-pad"
+                      />
+                    </View>
+                    <View style={styles.gridItem3}>
+                      <Text style={styles.totalBoxLabel}>{item.name} Total</Text>
+                      <View style={styles.classTotalBox}>
+                        <Text style={styles.classTotalNum}>{item.tot}</Text>
+                      </View>
+                    </View>
+                  </View>
                 </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>BS1 Girls</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={p1Girls}
-                    onChangeText={setP1Girls}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>BS2 Boys</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={p2Boys}
-                    onChangeText={setP2Boys}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>BS2 Girls</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={p2Girls}
-                    onChangeText={setP2Girls}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>BS3 Boys</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={p3Boys}
-                    onChangeText={setP3Boys}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>BS3 Girls</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={p3Girls}
-                    onChangeText={setP3Girls}
-                    keyboardType="number-pad"
-                  />
-                </View>
+              ))}
+
+              <View style={styles.levelSummaryRow}>
+                <Text style={styles.levelSummaryText}>Total Primary Boys: <Text style={styles.boldNum}>{primaryTotals.boys}</Text></Text>
+                <Text style={styles.levelSummaryText}>Total Primary Girls: <Text style={styles.boldNum}>{primaryTotals.girls}</Text></Text>
+                <Text style={[styles.levelSummaryText, styles.boldNum]}>Total Primary: {primaryTotals.total}</Text>
               </View>
 
-              <Text style={[styles.sectionHeading, { marginTop: 16 }]}>Upper Primary (BS4 – BS6)</Text>
-              <View style={styles.grid2}>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>BS4 Boys</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={p4Boys}
-                    onChangeText={setP4Boys}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>BS4 Girls</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={p4Girls}
-                    onChangeText={setP4Girls}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>BS5 Boys</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={p5Boys}
-                    onChangeText={setP5Boys}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>BS5 Girls</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={p5Girls}
-                    onChangeText={setP5Girls}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>BS6 Boys</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={p6Boys}
-                    onChangeText={setP6Boys}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>BS6 Girls</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={p6Girls}
-                    onChangeText={setP6Girls}
-                    keyboardType="number-pad"
-                  />
-                </View>
-              </View>
+              <View style={styles.divider} />
 
               <View style={styles.inputRow}>
                 <Text style={styles.inputLabel}>Assigned Primary Teachers</Text>
@@ -916,63 +863,51 @@ export default function HeadteacherFormScreen() {
           {/* STEP: JHS */}
           {activeStep.id === 'jhs' && (
             <View style={styles.card}>
-              <Text style={styles.sectionHeading}>Junior High School Enrolment</Text>
-              <View style={styles.grid2}>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>JHS1 Boys</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={jhs1Boys}
-                    onChangeText={setJhs1Boys}
-                    keyboardType="number-pad"
-                  />
+              <Text style={styles.sectionHeading}>Junior High School Enrolment (JHS1 to JHS3)</Text>
+
+              {([
+                { name: 'JHS1', b: jhs1Boys, setB: setJhs1Boys, g: jhs1Girls, setG: setJhs1Girls, tot: jhsTotals.jhs1.total },
+                { name: 'JHS2', b: jhs2Boys, setB: setJhs2Boys, g: jhs2Girls, setG: setJhs2Girls, tot: jhsTotals.jhs2.total },
+                { name: 'JHS3', b: jhs3Boys, setB: setJhs3Boys, g: jhs3Girls, setG: setJhs3Girls, tot: jhsTotals.jhs3.total },
+              ] as const).map((item) => (
+                <View key={item.name} style={styles.classCard}>
+                  <Text style={styles.classCardTitle}>Class {item.name}</Text>
+                  <View style={styles.grid3}>
+                    <View style={styles.gridItem3}>
+                      <Text style={styles.inputLabel}>Boys</Text>
+                      <TextInput
+                        style={styles.numInput}
+                        value={item.b}
+                        onChangeText={item.setB}
+                        keyboardType="number-pad"
+                      />
+                    </View>
+                    <View style={styles.gridItem3}>
+                      <Text style={styles.inputLabel}>Girls</Text>
+                      <TextInput
+                        style={styles.numInput}
+                        value={item.g}
+                        onChangeText={item.setG}
+                        keyboardType="number-pad"
+                      />
+                    </View>
+                    <View style={styles.gridItem3}>
+                      <Text style={styles.totalBoxLabel}>{item.name} Total</Text>
+                      <View style={styles.classTotalBox}>
+                        <Text style={styles.classTotalNum}>{item.tot}</Text>
+                      </View>
+                    </View>
+                  </View>
                 </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>JHS1 Girls</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={jhs1Girls}
-                    onChangeText={setJhs1Girls}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>JHS2 Boys</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={jhs2Boys}
-                    onChangeText={setJhs2Boys}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>JHS2 Girls</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={jhs2Girls}
-                    onChangeText={setJhs2Girls}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>JHS3 Boys</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={jhs3Boys}
-                    onChangeText={setJhs3Boys}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.gridItem}>
-                  <Text style={styles.inputLabel}>JHS3 Girls</Text>
-                  <TextInput
-                    style={styles.numInput}
-                    value={jhs3Girls}
-                    onChangeText={setJhs3Girls}
-                    keyboardType="number-pad"
-                  />
-                </View>
+              ))}
+
+              <View style={styles.levelSummaryRow}>
+                <Text style={styles.levelSummaryText}>Total JHS Boys: <Text style={styles.boldNum}>{jhsTotals.boys}</Text></Text>
+                <Text style={styles.levelSummaryText}>Total JHS Girls: <Text style={styles.boldNum}>{jhsTotals.girls}</Text></Text>
+                <Text style={[styles.levelSummaryText, styles.boldNum]}>Total JHS: {jhsTotals.total}</Text>
               </View>
+
+              <View style={styles.divider} />
 
               <View style={styles.inputRow}>
                 <Text style={styles.inputLabel}>Assigned JHS Subject Teachers</Text>
@@ -1089,7 +1024,7 @@ export default function HeadteacherFormScreen() {
           {/* STEP: REVIEW & SUBMIT */}
           {activeStep.id === 'review' && (
             <View style={styles.card}>
-              <Text style={styles.sectionHeading}>Summary Verification</Text>
+              <Text style={styles.sectionHeading}>School-Wide Summary Verification</Text>
               <View style={styles.summaryBox}>
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryVal}>{totalBoys}</Text>
@@ -1100,13 +1035,42 @@ export default function HeadteacherFormScreen() {
                   <Text style={styles.summaryLbl}>Total Girls</Text>
                 </View>
                 <View style={styles.summaryItem}>
-                  <Text style={styles.summaryVal}>{totalBoys + totalGirls}</Text>
+                  <Text style={styles.summaryVal}>{grandTotalPupils}</Text>
                   <Text style={styles.summaryLbl}>Grand Enrolment</Text>
                 </View>
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryVal}>{totalOverallTeachers}</Text>
                   <Text style={styles.summaryLbl}>Total Teachers</Text>
                 </View>
+              </View>
+
+              {/* Per-Level Summary Breakdown in Review */}
+              <Text style={[styles.sectionHeading, { fontSize: 13, marginTop: 8 }]}>Breakdown by Section</Text>
+              <View style={{ gap: 8, marginBottom: 16 }}>
+                {chosenLevels.includes('creche') && (
+                  <View style={styles.reviewLevelRow}>
+                    <Text style={styles.reviewLevelName}>Crèche / Nursery</Text>
+                    <Text style={styles.reviewLevelVal}>{crecheTotals.total} Pupils ({crecheTotals.boys}B / {crecheTotals.girls}G)</Text>
+                  </View>
+                )}
+                {chosenLevels.includes('kg') && (
+                  <View style={styles.reviewLevelRow}>
+                    <Text style={styles.reviewLevelName}>Kindergarten (KG)</Text>
+                    <Text style={styles.reviewLevelVal}>{kgTotals.total} Pupils (KG1: {kgTotals.kg1.total}, KG2: {kgTotals.kg2.total})</Text>
+                  </View>
+                )}
+                {chosenLevels.includes('primary') && (
+                  <View style={styles.reviewLevelRow}>
+                    <Text style={styles.reviewLevelName}>Primary (BS1–BS6)</Text>
+                    <Text style={styles.reviewLevelVal}>{primaryTotals.total} Pupils ({primaryTotals.boys}B / {primaryTotals.girls}G)</Text>
+                  </View>
+                )}
+                {chosenLevels.includes('jhs') && (
+                  <View style={styles.reviewLevelRow}>
+                    <Text style={styles.reviewLevelName}>Junior High (JHS)</Text>
+                    <Text style={styles.reviewLevelVal}>{jhsTotals.total} Pupils ({jhsTotals.boys}B / {jhsTotals.girls}G)</Text>
+                  </View>
+                )}
               </View>
 
               <TouchableOpacity
@@ -1341,12 +1305,80 @@ const styles = StyleSheet.create({
   gridItem: {
     width: '48%',
   },
-  numInput: {
+  grid3: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    alignItems: 'flex-end',
+  },
+  gridItem3: {
+    flex: 1,
+  },
+  classCard: {
     backgroundColor: '#FAFCFF',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    marginBottom: 12,
+  },
+  classCardTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: THEME.colors.navy,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  totalBoxLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: THEME.colors.midBlue,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  classTotalBox: {
+    backgroundColor: '#EEF3FB',
+    borderWidth: 1.5,
+    borderColor: '#B2DDFF',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  classTotalNum: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME.colors.navy,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  levelSummaryRow: {
+    backgroundColor: '#EEF3FB',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#B2DDFF',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  levelSummaryText: {
+    fontSize: 12,
+    color: THEME.colors.navy,
+    fontWeight: '600',
+  },
+  boldNum: {
+    fontWeight: 'bold',
+    color: THEME.colors.navy,
+  },
+  numInput: {
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     borderColor: THEME.colors.border,
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     paddingVertical: 10,
     fontSize: 16,
     fontWeight: 'bold',
@@ -1365,12 +1397,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: 'bold',
     color: THEME.colors.navy,
-  },
-  tableSub: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: THEME.colors.midBlue,
-    marginBottom: 6,
   },
   switchRow: {
     flexDirection: 'row',
@@ -1408,6 +1434,25 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginTop: 2,
     textAlign: 'center',
+  },
+  reviewLevelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 8,
+    backgroundColor: '#FAFCFF',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+  },
+  reviewLevelName: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: THEME.colors.navy,
+  },
+  reviewLevelVal: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.colors.text,
   },
   certifyRow: {
     flexDirection: 'row',
@@ -1449,53 +1494,49 @@ const styles = StyleSheet.create({
   saveDraftBtn: {
     backgroundColor: THEME.colors.surface,
     borderWidth: 1,
-    borderColor: THEME.colors.borderStrong,
+    borderColor: THEME.colors.navy,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flex: 1,
+    justifyContent: 'center',
   },
   saveDraftText: {
-    color: THEME.colors.text,
-    fontWeight: '600',
+    color: THEME.colors.navy,
+    fontWeight: 'bold',
     fontSize: 13,
   },
   nextBtn: {
-    flex: 1,
     backgroundColor: THEME.colors.navy,
     borderRadius: 8,
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
-    borderBottomWidth: 3,
-    borderBottomColor: THEME.colors.gold,
   },
   nextBtnText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 13,
   },
   submitFinalBtn: {
-    flex: 1,
-    backgroundColor: THEME.colors.navy,
+    backgroundColor: '#027A48',
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
-    borderBottomWidth: 3,
-    borderBottomColor: THEME.colors.gold,
+    flex: 1,
+    justifyContent: 'center',
   },
   submitFinalText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 13,
   },
 });
