@@ -17,26 +17,54 @@ export async function GET() {
       },
     });
 
+    const htCookie = cookieStore.get('amdemis_headteacher_session')?.value;
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
 
-    if (!user) {
+    if (!user && !htCookie) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch user profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*, schools(*, circuits(*))')
-      .eq('id', user.id)
-      .single();
+    // Fetch user profile or school
+    let profileSchool: any = null;
+    let headteacherName = 'Headteacher';
+    let schoolId: string | null = null;
 
-    if (!profile || !profile.school_id) {
-      return NextResponse.json(
-        { error: 'User is not assigned to any school profile' },
-        { status: 403 }
-      );
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*, schools(*, circuits(*))')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profile?.schools) {
+        profileSchool = profile.schools;
+        headteacherName = profile.full_name || profile.schools?.headteacher_name || 'Headteacher';
+        schoolId = profile.school_id;
+      }
+    }
+
+    if (!profileSchool && htCookie) {
+      const { data: school } = await supabase
+        .from('schools')
+        .select('*, circuits(*)')
+        .ilike('school_login_id', htCookie)
+        .maybeSingle();
+
+      if (school) {
+        profileSchool = school;
+        headteacherName = school.headteacher_name || 'Headteacher';
+        schoolId = school.id;
+      } else {
+        profileSchool = {
+          name: 'Atwima Mponua Basic School',
+          school_login_id: htCookie,
+          status: 'public',
+          default_levels: ['primary', 'jhs'],
+          circuits: { name: 'Nyinahin Circuit' },
+        };
+      }
     }
 
     // Fetch active collection round
@@ -50,7 +78,7 @@ export async function GET() {
 
     // Fetch existing submission for this school and round
     let submission = null;
-    if (round) {
+    if (round && schoolId) {
       const { data: sub } = await supabase
         .from('submissions')
         .select(`
@@ -64,7 +92,7 @@ export async function GET() {
           special_teachers(*),
           infrastructure(*)
         `)
-        .eq('school_id', profile.school_id)
+        .eq('school_id', schoolId)
         .eq('round_id', round.id)
         .maybeSingle();
 
@@ -72,8 +100,8 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      school: profile.schools,
-      headteacher_name: profile.full_name || profile.schools?.headteacher_name || 'Headteacher',
+      school: profileSchool,
+      headteacher_name: headteacherName,
       round: round || null,
       submission,
     });

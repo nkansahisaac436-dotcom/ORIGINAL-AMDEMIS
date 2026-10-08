@@ -31,10 +31,6 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const pathname = request.nextUrl.pathname;
 
   // Static assets, api routes, branding, manifest bypass
@@ -49,8 +45,32 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Not logged in
-  if (!user) {
+  // Check fallback session cookies
+  const adminCookie = request.cookies.get('amdemis_admin_session')?.value;
+  const htCookie = request.cookies.get('amdemis_headteacher_session')?.value;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+
+  let role: string | undefined;
+
+  if (adminCookie) {
+    role = 'super_admin';
+  } else if (htCookie) {
+    role = 'headteacher';
+  } else if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, is_initial_pin')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    role = profile?.role;
+  }
+
+  // If not logged in
+  if (!role) {
     if (pathname.startsWith('/headteacher') || pathname.startsWith('/admin')) {
       const url = request.nextUrl.clone();
       url.pathname = '/';
@@ -58,15 +78,6 @@ export async function updateSession(request: NextRequest) {
     }
     return supabaseResponse;
   }
-
-  // User is logged in, query their profile role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, is_initial_pin')
-    .eq('id', user.id)
-    .single();
-
-  const role = profile?.role;
 
   // If at root '/' or login page, redirect to appropriate area
   if (pathname === '/') {

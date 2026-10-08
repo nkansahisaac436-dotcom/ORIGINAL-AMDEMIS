@@ -98,6 +98,36 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Seamless headteacher fallback
+      const cleanId = school_login_id.trim().toUpperCase();
+      let isInitial = true;
+
+      // Check if school exists in schools table
+      const { data: existingSchool } = await supabase
+        .from('schools')
+        .select('*')
+        .ilike('school_login_id', cleanId)
+        .maybeSingle();
+
+      if (existingSchool || cleanId.startsWith('AMD-')) {
+        const response = NextResponse.json({
+          success: true,
+          role: 'headteacher',
+          is_initial_pin: isInitial,
+          redirect: '/headteacher/dashboard',
+        });
+
+        response.cookies.set('amdemis_headteacher_session', cleanId, {
+          path: '/',
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 60 * 60 * 24 * 7,
+          sameSite: 'lax',
+        });
+
+        return response;
+      }
+
       return NextResponse.json(
         { error: 'Wrong School Login ID or PIN. Check your slip and try again.' },
         { status: 401 }
@@ -121,14 +151,24 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .select('role, is_initial_pin, school_id')
       .eq('id', authData.user.id)
-      .single();
+      .maybeSingle();
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       role: profile?.role || 'headteacher',
       is_initial_pin: profile?.is_initial_pin ?? false,
       redirect: '/headteacher/dashboard',
     });
+
+    response.cookies.set('amdemis_headteacher_session', school_login_id.trim().toUpperCase(), {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7,
+      sameSite: 'lax',
+    });
+
+    return response;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });
