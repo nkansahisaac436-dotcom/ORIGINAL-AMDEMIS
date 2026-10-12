@@ -26,7 +26,20 @@ import {
   Armchair,
   GraduationCap,
   Users,
+  Plus,
+  Edit2,
+  XCircle,
+  CalendarDays,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import {
   BarChart,
   Bar,
@@ -47,6 +60,30 @@ export default function AdminDashboardPage() {
   const [data, setData] = React.useState<any>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [circuitFilter, setCircuitFilter] = React.useState('all');
+
+  // Round Modal state (Create & Edit)
+  const [roundModalOpen, setRoundModalOpen] = React.useState(false);
+  const [editingRound, setEditingRound] = React.useState<any>(null);
+  const [roundTitle, setRoundTitle] = React.useState('2026/2027 Academic Year');
+  const [roundInstructions, setRoundInstructions] = React.useState(
+    'Please complete your annual EMIS return accurately before the deadline.'
+  );
+  const [roundOpeningDate, setRoundOpeningDate] = React.useState(
+    new Date().toISOString().split('T')[0]
+  );
+  const [roundDeadline, setRoundDeadline] = React.useState(
+    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)
+  );
+  const [isSubmittingRound, setIsSubmittingRound] = React.useState(false);
+
+  // Extend Deadline Modal
+  const [extendModalOpen, setExtendModalOpen] = React.useState(false);
+  const [extendDeadlineVal, setExtendDeadlineVal] = React.useState('');
+  const [isExtendingDeadline, setIsExtendingDeadline] = React.useState(false);
+
+  // Close Round Confirm Modal
+  const [closeModalOpen, setCloseModalOpen] = React.useState(false);
+  const [isClosingRound, setIsClosingRound] = React.useState(false);
 
   const fetchOverview = async () => {
     try {
@@ -109,12 +146,140 @@ export default function AdminDashboardPage() {
 
   const COLORS = ['#0A2A66', '#F2B705', '#10B981', '#EF4444', '#8B5CF6'];
 
+  const handleOpenCreateRound = () => {
+    setEditingRound(null);
+    setRoundTitle('2026/2027 Academic Year');
+    setRoundInstructions('Please complete your annual EMIS return accurately before the deadline.');
+    setRoundOpeningDate(new Date().toISOString().split('T')[0]);
+    setRoundDeadline(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16));
+    setRoundModalOpen(true);
+  };
+
+  const handleOpenEditRound = () => {
+    if (!activeRound) return;
+    setEditingRound(activeRound);
+    setRoundTitle(activeRound.title);
+    setRoundInstructions(activeRound.instructions || '');
+    setRoundOpeningDate(activeRound.opening_date ? activeRound.opening_date.split('T')[0] : '');
+    setRoundDeadline(activeRound.deadline ? new Date(activeRound.deadline).toISOString().slice(0, 16) : '');
+    setRoundModalOpen(true);
+  };
+
+  const handleSaveRound = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!roundTitle.trim() || !roundDeadline) {
+      toast.error('Title and deadline are required');
+      return;
+    }
+
+    setIsSubmittingRound(true);
+    try {
+      if (editingRound) {
+        const res = await fetch('/api/admin/rounds', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingRound.id,
+            title: roundTitle.trim(),
+            instructions: roundInstructions.trim() || null,
+            opening_date: roundOpeningDate,
+            deadline: new Date(roundDeadline).toISOString(),
+            is_active: true,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to update round');
+        }
+        toast.success('Collection round updated successfully');
+      } else {
+        const res = await fetch('/api/admin/rounds', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: roundTitle.trim(),
+            instructions: roundInstructions.trim() || null,
+            opening_date: roundOpeningDate,
+            deadline: new Date(roundDeadline).toISOString(),
+            is_active: true,
+            is_locked: false,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to create round');
+        }
+        toast.success(`Collection round "${roundTitle}" created and activated!`);
+      }
+      setRoundModalOpen(false);
+      fetchOverview();
+    } catch (err: any) {
+      toast.error(err.message || 'Error saving collection round');
+    } finally {
+      setIsSubmittingRound(false);
+    }
+  };
+
+  const handleExtendDeadline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!extendDeadlineVal || !activeRound) return;
+    setIsExtendingDeadline(true);
+    try {
+      const res = await fetch('/api/admin/rounds', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: activeRound.id,
+          action: 'extend_deadline',
+          deadline: new Date(extendDeadlineVal).toISOString(),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to extend deadline');
+      }
+      toast.success('Collection round deadline extended successfully');
+      setExtendModalOpen(false);
+      fetchOverview();
+    } catch (err: any) {
+      toast.error(err.message || 'Error extending deadline');
+    } finally {
+      setIsExtendingDeadline(false);
+    }
+  };
+
+  const handleCloseRound = async () => {
+    if (!activeRound) return;
+    setIsClosingRound(true);
+    try {
+      const res = await fetch('/api/admin/rounds', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: activeRound.id,
+          action: 'close',
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to close round');
+      }
+      toast.success(`Collection round "${activeRound.title}" closed successfully`);
+      setCloseModalOpen(false);
+      fetchOverview();
+    } catch (err: any) {
+      toast.error(err.message || 'Error closing round');
+    } finally {
+      setIsClosingRound(false);
+    }
+  };
+
   return (
     <AdminLayout
       adminName="District Administrator"
       activeRoundTitle={activeRound?.title || 'No Active Round'}
     >
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {/* Welcome Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -147,33 +312,127 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* First-Run Setup Checklist (Ticks automatically!) */}
-        {!setupChecklist.is_first_run_complete && (
-          <Card className="border-2 border-brand-gold/60 bg-amber-50/50 dark:bg-slate-900 shadow-md">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-extrabold flex items-center gap-2 text-brand-navy dark:text-brand-gold">
-                  <Layers className="h-5 w-5 text-brand-gold" />
-                  First-Run District System Setup Checklist
-                </CardTitle>
-                <Badge variant="gold" className="text-xs">
-                  Action Required
-                </Badge>
+        {/* Section E.1: Collection Round Banner (Active vs Inactive) */}
+        {!activeRound ? (
+          <Card className="border-2 border-brand-gold/70 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-slate-900 dark:to-slate-900/90 shadow-md">
+            <CardContent className="p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Badge variant="destructive" className="text-xs px-2.5 py-0.5">
+                    No Active Collection Round
+                  </Badge>
+                  <span className="text-xs text-muted-foreground font-semibold">Submissions are currently closed</span>
+                </div>
+                <h2 className="text-lg sm:text-xl font-extrabold text-foreground">
+                  No active collection round is open
+                </h2>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-2xl">
+                  Schools cannot submit EMIS returns until a collection round is opened. Create one to begin annual data collection for the academic year.
+                </p>
               </div>
-              <CardDescription>
-                Complete these initial steps to prepare AMDEMIS for district-wide annual data collection.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* Step 1: Add Circuits */}
-                <div
-                  className={`p-3.5 rounded-xl border flex items-start gap-3 ${
-                    setupChecklist.circuits_created
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 text-emerald-900 dark:text-emerald-200'
-                      : 'bg-white dark:bg-slate-800 border-slate-300'
-                  }`}
+              <Button
+                onClick={handleOpenCreateRound}
+                className="bg-brand-gold hover:bg-brand-goldHover text-brand-navy font-bold text-sm h-11 px-5 shadow shrink-0 flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Create Collection Round</span>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-2 border-brand-midBlue bg-[#0A2A66] text-white shadow-md">
+            <CardContent className="p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    ACTIVE COLLECTION ROUND
+                  </span>
+                  <span className="text-xs text-blue-200">
+                    Opened: {activeRound.opening_date ? new Date(activeRound.opening_date).toLocaleDateString('en-GB') : 'N/A'}
+                  </span>
+                  <span className="text-xs text-brand-gold font-bold">
+                    Deadline: {activeRound.deadline ? new Date(activeRound.deadline).toLocaleDateString('en-GB') : 'N/A'}
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                  {activeRound.title}
+                </h2>
+                {activeRound.instructions && (
+                  <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed max-w-2xl">
+                    {activeRound.instructions}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleOpenEditRound}
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs font-bold"
                 >
+                  <Edit2 className="h-3.5 w-3.5 mr-1.5" />
+                  <span>Edit Round</span>
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setExtendDeadlineVal(
+                      activeRound.deadline
+                        ? new Date(new Date(activeRound.deadline).getTime() + 7 * 24 * 60 * 60 * 1000)
+                            .toISOString()
+                            .slice(0, 16)
+                        : ''
+                    );
+                    setExtendModalOpen(true);
+                  }}
+                  className="bg-brand-gold hover:bg-brand-goldHover text-brand-navy text-xs font-bold"
+                >
+                  <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
+                  <span>Extend Deadline</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setCloseModalOpen(true)}
+                  className="text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white"
+                >
+                  <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                  <span>Close Round</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Section E.4: Setup Checklist that ticks automatically (3 steps with button on each step) */}
+        <Card className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-extrabold flex items-center gap-2 text-brand-navy dark:text-brand-gold">
+                <Layers className="h-5 w-5 text-brand-gold" />
+                District System Setup &amp; Readiness Checklist
+              </CardTitle>
+              <Badge variant={setupChecklist.is_first_run_complete ? 'success' : 'gold'} className="text-xs">
+                {setupChecklist.is_first_run_complete ? 'Ready for Collection' : 'Setup In Progress'}
+              </Badge>
+            </div>
+            <CardDescription>
+              District monitoring readiness is automatically tracked based on registered circuits, schools, and active rounds.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {/* Step 1: Add Circuits */}
+              <div
+                className={`p-4 rounded-xl border flex flex-col justify-between gap-3 ${
+                  setupChecklist.circuits_created
+                    ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 text-emerald-900 dark:text-emerald-200'
+                    : 'bg-white dark:bg-slate-800 border-slate-300'
+                }`}
+              >
+                <div className="flex items-start gap-3">
                   {setupChecklist.circuits_created ? (
                     <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
                   ) : (
@@ -183,116 +442,107 @@ export default function AdminDashboardPage() {
                     <span className="text-xs font-bold block">1. Add Circuits</span>
                     <span className="text-[11px] text-muted-foreground">
                       {setupChecklist.circuits_created
-                        ? `${setupChecklist.circuits_count} circuits created`
+                        ? `${setupChecklist.circuits_count} circuits registered`
                         : 'Create district circuits'}
                     </span>
-                    {!setupChecklist.circuits_created && (
-                      <Link
-                        href="/admin/circuits"
-                        className="text-[11px] font-bold text-brand-midBlue block mt-1 hover:underline"
-                      >
-                        Add Circuits →
-                      </Link>
-                    )}
                   </div>
                 </div>
-
-                {/* Step 2: Add Schools & Assign */}
-                <div
-                  className={`p-3.5 rounded-xl border flex items-start gap-3 ${
-                    setupChecklist.schools_created
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 text-emerald-900 dark:text-emerald-200'
-                      : 'bg-white dark:bg-slate-800 border-slate-300'
+                <Button
+                  size="sm"
+                  variant={setupChecklist.circuits_created ? 'outline' : 'default'}
+                  onClick={() => router.push('/admin/circuits')}
+                  className={`text-xs font-bold w-full ${
+                    setupChecklist.circuits_created
+                      ? 'border-emerald-300 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100/50'
+                      : 'bg-brand-navy hover:bg-brand-midBlue text-white'
                   }`}
                 >
+                  {setupChecklist.circuits_created ? 'Manage Circuits' : 'Add Circuits'}
+                </Button>
+              </div>
+
+              {/* Step 2: Add Schools & Issue PINs */}
+              <div
+                className={`p-4 rounded-xl border flex flex-col justify-between gap-3 ${
+                  setupChecklist.schools_created
+                    ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 text-emerald-900 dark:text-emerald-200'
+                    : 'bg-white dark:bg-slate-800 border-slate-300'
+                }`}
+              >
+                <div className="flex items-start gap-3">
                   {setupChecklist.schools_created ? (
                     <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
                   ) : (
                     <Circle className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
                   )}
                   <div>
-                    <span className="text-xs font-bold block">2. Add Schools</span>
+                    <span className="text-xs font-bold block">2. Add Schools &amp; Issue PINs</span>
                     <span className="text-[11px] text-muted-foreground">
                       {setupChecklist.schools_created
-                        ? `${setupChecklist.schools_count} schools registered`
-                        : 'Import or add schools'}
+                        ? `${setupChecklist.schools_count} schools registered & PINs issued`
+                        : 'Add schools and generate login PINs'}
                     </span>
-                    {!setupChecklist.schools_created && (
-                      <Link
-                        href="/admin/schools"
-                        className="text-[11px] font-bold text-brand-midBlue block mt-1 hover:underline"
-                      >
-                        Add Schools →
-                      </Link>
-                    )}
                   </div>
                 </div>
-
-                {/* Step 3: Generate PINs */}
-                <div
-                  className={`p-3.5 rounded-xl border flex items-start gap-3 ${
-                    setupChecklist.pins_generated
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 text-emerald-900 dark:text-emerald-200'
-                      : 'bg-white dark:bg-slate-800 border-slate-300'
+                <Button
+                  size="sm"
+                  variant={setupChecklist.schools_created ? 'outline' : 'default'}
+                  onClick={() => router.push('/admin/schools')}
+                  className={`text-xs font-bold w-full ${
+                    setupChecklist.schools_created
+                      ? 'border-emerald-300 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100/50'
+                      : 'bg-brand-navy hover:bg-brand-midBlue text-white'
                   }`}
                 >
-                  {setupChecklist.pins_generated ? (
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
-                  )}
-                  <div>
-                    <span className="text-xs font-bold block">3. Generate PINs</span>
-                    <span className="text-[11px] text-muted-foreground">
-                      {setupChecklist.pins_generated
-                        ? 'Headteacher credentials generated'
-                        : 'Print PIN slips'}
-                    </span>
-                    {!setupChecklist.pins_generated && (
-                      <Link
-                        href="/admin/schools"
-                        className="text-[11px] font-bold text-brand-midBlue block mt-1 hover:underline"
-                      >
-                        Generate PINs →
-                      </Link>
-                    )}
-                  </div>
-                </div>
-
-                {/* Step 4: Open Round */}
-                <div
-                  className={`p-3.5 rounded-xl border flex items-start gap-3 ${
-                    setupChecklist.round_opened
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 text-emerald-900 dark:text-emerald-200'
-                      : 'bg-white dark:bg-slate-800 border-slate-300'
-                  }`}
-                >
-                  {setupChecklist.round_opened ? (
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
-                  )}
-                  <div>
-                    <span className="text-xs font-bold block">4. Open Round</span>
-                    <span className="text-[11px] text-muted-foreground">
-                      {setupChecklist.round_opened
-                        ? `Round "${activeRound?.title}" is open`
-                        : 'Open collection window'}
-                    </span>
-                    {!setupChecklist.round_opened && (
-                      <Link
-                        href="/admin/rounds"
-                        className="text-[11px] font-bold text-brand-midBlue block mt-1 hover:underline"
-                      >
-                        Open Round →
-                      </Link>
-                    )}
-                  </div>
-                </div>
+                  {setupChecklist.schools_created ? 'Manage Schools & PINs' : 'Add Schools & PINs'}
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        )}
+
+              {/* Step 3: Create Collection Round */}
+              <div
+                className={`p-4 rounded-xl border flex flex-col justify-between gap-3 ${
+                  activeRound && activeRound.is_active
+                    ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 text-emerald-900 dark:text-emerald-200'
+                    : 'bg-white dark:bg-slate-800 border-slate-300'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  {activeRound && activeRound.is_active ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <Circle className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
+                  )}
+                  <div>
+                    <span className="text-xs font-bold block">3. Create Collection Round</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {activeRound && activeRound.is_active
+                        ? `Active: ${activeRound.title}`
+                        : 'Open annual EMIS collection window'}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant={activeRound && activeRound.is_active ? 'outline' : 'default'}
+                  onClick={() => {
+                    if (activeRound && activeRound.is_active) {
+                      router.push('/admin/rounds');
+                    } else {
+                      handleOpenCreateRound();
+                    }
+                  }}
+                  className={`text-xs font-bold w-full ${
+                    activeRound && activeRound.is_active
+                      ? 'border-emerald-300 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100/50'
+                      : 'bg-brand-gold hover:bg-brand-goldHover text-brand-navy'
+                  }`}
+                >
+                  {activeRound && activeRound.is_active ? 'Manage Rounds' : 'Create Collection Round'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Primary Metrics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -604,6 +854,167 @@ export default function AdminDashboardPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Modal 1: Create / Edit Collection Round */}
+        <Dialog open={roundModalOpen} onOpenChange={setRoundModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-brand-navy dark:text-brand-gold">
+                <CalendarDays className="h-5 w-5" />
+                <span>{editingRound ? 'Edit Collection Round' : 'Create Collection Round'}</span>
+              </DialogTitle>
+              <DialogDescription>
+                {editingRound
+                  ? 'Update collection cycle parameters and guidance for headteachers.'
+                  : 'Open a new annual EMIS return window for all schools across the district.'}
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleSaveRound} className="space-y-4 mt-2">
+              <div>
+                <Input
+                  label="Academic Year Title *"
+                  required
+                  placeholder="e.g. 2026/2027 Academic Year"
+                  value={roundTitle}
+                  onChange={(e) => setRoundTitle(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-foreground">
+                  Instructions for Headteachers (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Instructions, guidelines, or notice for schools..."
+                  value={roundInstructions}
+                  onChange={(e) => setRoundInstructions(e.target.value)}
+                  className="w-full text-xs rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 focus:outline-none focus:ring-2 focus:ring-brand-gold text-foreground"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Input
+                    label="Opening Date *"
+                    type="date"
+                    required
+                    value={roundOpeningDate}
+                    onChange={(e) => setRoundOpeningDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Input
+                    label="Deadline *"
+                    type="datetime-local"
+                    required
+                    value={roundDeadline}
+                    onChange={(e) => setRoundDeadline(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRoundModalOpen(false)}
+                  disabled={isSubmittingRound}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmittingRound || !roundTitle.trim() || !roundDeadline}
+                  className="bg-brand-navy hover:bg-brand-midBlue text-white font-bold"
+                >
+                  {isSubmittingRound ? 'Saving...' : editingRound ? 'Save Changes' : 'Create & Activate Round'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal 2: Extend Deadline */}
+        <Dialog open={extendModalOpen} onOpenChange={setExtendModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-brand-navy dark:text-brand-gold">
+                <Clock className="h-5 w-5" />
+                <span>Extend Collection Deadline</span>
+              </DialogTitle>
+              <DialogDescription>
+                Select a new submission deadline for &quot;{activeRound?.title}&quot;. Schools with drafts will be able to complete their submissions until the new date.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleExtendDeadline} className="space-y-4 mt-2">
+              <div>
+                <Input
+                  label="New Deadline *"
+                  type="datetime-local"
+                  required
+                  value={extendDeadlineVal}
+                  onChange={(e) => setExtendDeadlineVal(e.target.value)}
+                />
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setExtendModalOpen(false)}
+                  disabled={isExtendingDeadline}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isExtendingDeadline || !extendDeadlineVal}
+                  className="bg-brand-gold hover:bg-brand-goldHover text-brand-navy font-bold"
+                >
+                  {isExtendingDeadline ? 'Updating...' : 'Extend Deadline'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal 3: Close Round Confirmation */}
+        <Dialog open={closeModalOpen} onOpenChange={setCloseModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-rose-600">
+                <AlertCircle className="h-5 w-5" />
+                <span>Close Collection Round?</span>
+              </DialogTitle>
+              <DialogDescription className="text-slate-600 dark:text-slate-300 pt-1 leading-relaxed">
+                Are you sure you want to close &quot;{activeRound?.title}&quot;? Headteachers will immediately no longer be able to submit or edit their EMIS figures. This action locks all responses for final district reporting.
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter className="pt-3 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCloseModalOpen(false)}
+                disabled={isClosingRound}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleCloseRound}
+                disabled={isClosingRound}
+                className="font-bold bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                {isClosingRound ? 'Closing...' : 'Yes, Close Round'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

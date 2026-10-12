@@ -1,7 +1,11 @@
 import { z } from 'zod';
 
 export const circuitSchema = z.object({
-  name: z.string().min(2, 'Circuit name is required'),
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Circuit name must be at least 2 characters')
+    .max(60, 'Circuit name cannot exceed 60 characters'),
   code: z.string().optional().default(''),
   is_active: z.boolean().default(true),
 });
@@ -16,7 +20,7 @@ export const schoolSchema = z.object({
   town: z.string().optional().default(''),
   default_levels: z
     .array(z.enum(['creche', 'kg', 'primary', 'jhs', 'shs']))
-    .min(1, 'Select at least one starting level'),
+    .default(['primary', 'jhs']),
   headteacher_name: z.string().optional().default(''),
   headteacher_phone: z.string().optional().default(''),
   assistant_headteacher_name: z.string().optional().default(''),

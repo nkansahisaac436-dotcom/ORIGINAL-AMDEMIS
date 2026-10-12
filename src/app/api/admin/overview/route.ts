@@ -1,32 +1,65 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { verifyAdminRole } from '@/lib/auth-helpers';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { memoryCircuits, memorySchools, memoryRounds } from '@/lib/memory-store';
 
 export async function GET() {
   try {
+    const adminAuth = await verifyAdminRole();
+    if (!adminAuth.isAdmin) {
+      return NextResponse.json({ error: adminAuth.error || 'Admin access required' }, { status: 403 });
+    }
+
     const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
+    let client;
+    try {
+      client = createAdminClient();
+    } catch {
+      client = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+        {
+          cookies: {
+            getAll() {
+              return cookieStore.getAll();
+            },
+            setAll() {},
           },
-          setAll() {},
-        },
-      }
-    );
+        }
+      );
+    }
 
     // 1. Fetch Circuits & Schools
-    const { data: circuits } = await supabase.from('circuits').select('id, name, is_active');
-    const { data: schools } = await supabase
+    const { data: dbCircuits } = await client.from('circuits').select('id, name, is_active');
+    const { data: dbSchools } = await client
       .from('schools')
       .select('*, circuits(id, name)')
       .eq('is_active', true);
 
+    const circuitsMap = new Map<string, any>();
+    (dbCircuits || []).forEach((c: any) => circuitsMap.set(c.id, c));
+    for (const mc of memoryCircuits.values()) {
+      if (!circuitsMap.has(mc.id)) circuitsMap.set(mc.id, mc);
+    }
+    const circuits = Array.from(circuitsMap.values());
+
+    const schoolsMap = new Map<string, any>();
+    (dbSchools || []).forEach((s: any) => schoolsMap.set(s.id, s));
+    for (const ms of memorySchools.values()) {
+      if (ms.is_active && !schoolsMap.has(ms.id)) {
+        const circ = circuitsMap.get(ms.circuit_id);
+        schoolsMap.set(ms.id, {
+          ...ms,
+          circuits: circ ? { id: circ.id, name: circ.name } : { id: ms.circuit_id, name: 'Circuit' },
+        });
+      }
+    }
+    const schools = Array.from(schoolsMap.values());
+
     // 2. Fetch Active Round
-    const { data: activeRound } = await supabase
+    const { data: dbActiveRound } = await client
       .from('rounds')
       .select('*')
       .eq('is_active', true)
@@ -34,24 +67,38 @@ export async function GET() {
       .limit(1)
       .maybeSingle();
 
+    let activeRound = dbActiveRound;
+    if (!activeRound) {
+      for (const mr of memoryRounds.values()) {
+        if (mr.is_active) {
+          activeRound = mr;
+          break;
+        }
+      }
+    }
+
     // 3. Fetch Submissions for active round
     let submissions: any[] = [];
     if (activeRound) {
-      const { data: subs } = await supabase
-        .from('submissions')
-        .select(`
-          *,
-          schools(id, name, status, headteacher_name, headteacher_phone, circuit_id, circuits(name)),
-          submission_levels(level),
-          enrolment(*),
-          teachers(*),
-          classrooms(*),
-          furniture(*),
-          infrastructure(*)
-        `)
-        .eq('round_id', activeRound.id);
+      try {
+        const { data: subs } = await client
+          .from('submissions')
+          .select(`
+            *,
+            schools(id, name, status, headteacher_name, headteacher_phone, circuit_id, circuits(name)),
+            submission_levels(level),
+            enrolment(*),
+            teachers(*),
+            classrooms(*),
+            furniture(*),
+            infrastructure(*)
+          `)
+          .eq('round_id', activeRound.id);
 
-      submissions = subs || [];
+        submissions = subs || [];
+      } catch {
+        // Fallback
+      }
     }
 
     const totalSchoolsCount = schools?.length || 0;

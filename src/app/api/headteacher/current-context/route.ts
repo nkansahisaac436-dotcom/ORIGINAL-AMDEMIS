@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function GET() {
   try {
@@ -30,6 +31,7 @@ export async function GET() {
     let profileSchool: any = null;
     let headteacherName = 'Headteacher';
     let schoolId: string | null = null;
+    let isInitialPin = false;
 
     if (user) {
       const { data: profile } = await supabase
@@ -42,11 +44,19 @@ export async function GET() {
         profileSchool = profile.schools;
         headteacherName = profile.full_name || profile.schools?.headteacher_name || 'Headteacher';
         schoolId = profile.school_id;
+        isInitialPin = !!profile.is_initial_pin;
       }
     }
 
     if (!profileSchool && htCookie) {
-      const { data: school } = await supabase
+      let client;
+      try {
+        client = createAdminClient();
+      } catch {
+        client = supabase;
+      }
+
+      const { data: school } = await client
         .from('schools')
         .select('*, circuits(*)')
         .ilike('school_login_id', htCookie)
@@ -56,6 +66,14 @@ export async function GET() {
         profileSchool = school;
         headteacherName = school.headteacher_name || 'Headteacher';
         schoolId = school.id;
+        const { data: prof } = await client
+          .from('profiles')
+          .select('is_initial_pin')
+          .eq('school_id', school.id)
+          .maybeSingle();
+        if (prof) {
+          isInitialPin = !!prof.is_initial_pin;
+        }
       } else {
         profileSchool = {
           name: 'Atwima Mponua Basic School',
@@ -104,6 +122,7 @@ export async function GET() {
       headteacher_name: headteacherName,
       round: round || null,
       submission,
+      is_initial_pin: isInitialPin,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal Server Error';

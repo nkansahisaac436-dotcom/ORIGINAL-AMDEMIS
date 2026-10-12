@@ -171,7 +171,7 @@ export default function AdminDashboardScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.navTitle}>Schools & Login PINs</Text>
-                <Text style={styles.navSub}>Generate slips, reset PINs, view profiles</Text>
+                <Text style={styles.navSub}>Add schools, issue PINs, reset PINs</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={THEME.colors.textMuted} />
             </TouchableOpacity>

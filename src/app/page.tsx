@@ -35,6 +35,9 @@ export default function LoginPage() {
   const [isSendingForgot, setIsSendingForgot] = React.useState(false);
   const [forgotSuccessMessage, setForgotSuccessMessage] = React.useState<string | null>(null);
 
+  // Forgot PIN modal (Headteacher)
+  const [showForgotPinModal, setShowForgotPinModal] = React.useState(false);
+
   // Initial PIN change modal
   const [showInitialPinModal, setShowInitialPinModal] = React.useState(false);
   const [newPin, setNewPin] = React.useState('');
@@ -292,12 +295,21 @@ export default function LoginPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label
-                          htmlFor="headteacher-pin"
-                          className="block text-sm font-medium text-foreground"
-                        >
-                          PIN <span className="text-brand-error">*</span>
-                        </label>
+                        <div className="flex items-center justify-between">
+                          <label
+                            htmlFor="headteacher-pin"
+                            className="block text-sm font-medium text-foreground"
+                          >
+                            PIN <span className="text-brand-error">*</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setShowForgotPinModal(true)}
+                            className="text-xs font-semibold text-brand-midBlue hover:text-brand-navy hover:underline dark:text-blue-400"
+                          >
+                            Forgot your PIN?
+                          </button>
+                        </div>
                         <div className="relative">
                           <input
                             id="headteacher-pin"
@@ -528,6 +540,59 @@ export default function LoginPage() {
               </div>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Forgot PIN Modal for Headteacher (Directs to Directorate, no self-service reset) */}
+      <Dialog open={showForgotPinModal} onOpenChange={setShowForgotPinModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-brand-navy dark:text-brand-gold text-lg font-bold">
+              <HelpCircle className="h-5 w-5 text-brand-gold" />
+              Forgot Your School Login PIN?
+            </DialogTitle>
+            <DialogDescription className="text-slate-600 dark:text-slate-300 pt-2 leading-relaxed text-sm">
+              Please contact the Planning &amp; Statistics Unit and give them your School Login ID (e.g. AMD-0001). They will verify your school and issue you a new secure PIN.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3.5 my-2 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 text-xs">
+            <div className="flex items-start gap-2.5">
+              <span className="font-bold text-foreground min-w-[90px]">Directorate:</span>
+              <span className="text-muted-foreground">Atwima Mponua District Education Office, Nyinahin</span>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <span className="font-bold text-foreground min-w-[90px]">Unit:</span>
+              <span className="text-muted-foreground">Planning &amp; Statistics Unit</span>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <span className="font-bold text-foreground min-w-[90px]">Helpline Phone:</span>
+              <a href="tel:+233241234567" className="font-bold text-brand-midBlue hover:underline dark:text-blue-400 font-mono">
+                +233 24 123 4567 / +233 20 987 6543
+              </a>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <span className="font-bold text-foreground min-w-[90px]">WhatsApp:</span>
+              <a
+                href="https://wa.me/233241234567?text=Hello%20Planning%20Unit,%20I%20need%20a%20PIN%20reset%20for%20my%20school."
+                target="_blank"
+                rel="noreferrer"
+                className="font-bold text-emerald-600 hover:underline dark:text-emerald-400 flex items-center gap-1"
+              >
+                Chat on WhatsApp (+233 24 123 4567) →
+              </a>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button
+              type="button"
+              onClick={() => setShowForgotPinModal(false)}
+              className="bg-brand-navy hover:bg-brand-midBlue text-white font-bold"
+            >
+              Understood
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

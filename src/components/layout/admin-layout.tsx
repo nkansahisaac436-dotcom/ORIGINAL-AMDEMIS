@@ -253,9 +253,60 @@ export function AdminLayout({
         </header>
 
         {/* Page Content Body */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-8">
           {children}
         </main>
+
+        {/* Mobile Bottom Navigation Bar (4 Primary Tabs) */}
+        <nav
+          aria-label="Mobile Bottom Navigation"
+          className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0A2A66] text-white border-t border-[#061A40] shadow-lg flex items-center justify-around px-2 py-2 safe-area-bottom"
+        >
+          <Link
+            href="/admin/dashboard"
+            className={`flex flex-col items-center justify-center flex-1 py-1 text-[11px] font-semibold transition-colors ${
+              pathname === '/admin/dashboard'
+                ? 'text-brand-gold font-bold'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <LayoutDashboard className="h-5 w-5 mb-0.5" />
+            <span>Overview</span>
+          </Link>
+          <Link
+            href="/admin/schools"
+            className={`flex flex-col items-center justify-center flex-1 py-1 text-[11px] font-semibold transition-colors ${
+              pathname === '/admin/schools'
+                ? 'text-brand-gold font-bold'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <GraduationCap className="h-5 w-5 mb-0.5" />
+            <span>Schools &amp; PINs</span>
+          </Link>
+          <Link
+            href="/admin/circuits"
+            className={`flex flex-col items-center justify-center flex-1 py-1 text-[11px] font-semibold transition-colors ${
+              pathname === '/admin/circuits'
+                ? 'text-brand-gold font-bold'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <MapPin className="h-5 w-5 mb-0.5" />
+            <span>Circuits</span>
+          </Link>
+          <Link
+            href="/admin/submissions"
+            className={`flex flex-col items-center justify-center flex-1 py-1 text-[11px] font-semibold transition-colors ${
+              pathname === '/admin/submissions'
+                ? 'text-brand-gold font-bold'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <FileSpreadsheet className="h-5 w-5 mb-0.5" />
+            <span>Submissions</span>
+          </Link>
+        </nav>
       </div>
 
       {/* Mobile Drawer Menu */}
