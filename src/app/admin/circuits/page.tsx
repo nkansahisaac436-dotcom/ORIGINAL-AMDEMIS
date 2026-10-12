@@ -27,8 +27,10 @@ import {
   Info,
   CheckCircle2,
   Clock,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { handleFieldFocus } from '@/hooks/use-visual-viewport';
 
 export default function AdminCircuitsPage() {
   const [circuits, setCircuits] = React.useState<any[]>([]);
@@ -419,102 +421,143 @@ export default function AdminCircuitsPage() {
 
       {/* Add / Rename Circuit Bottom Sheet (Mobile Dialog) */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md w-full rounded-2xl p-6">
-          <DialogHeader className="text-left">
-            <DialogTitle className="text-lg font-black text-brand-navy dark:text-brand-gold flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-brand-gold" />
-              <span>{editingCircuit ? 'Rename Circuit' : 'Add New Circuit'}</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              {editingCircuit
-                ? 'Enter the updated official name for this educational zone.'
-                : 'Educational cluster zone within Atwima Mponua District Directorate.'}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-md">
+          {/* Header Bar at Top */}
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-lg font-black text-brand-navy dark:text-brand-gold flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-brand-gold shrink-0" />
+                <span>{editingCircuit ? 'Rename Circuit' : 'Add New Circuit'}</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                {editingCircuit
+                  ? 'Enter the updated official name for this educational zone.'
+                  : 'Educational cluster zone within Atwima Mponua District Directorate.'}
+              </DialogDescription>
+            </DialogHeader>
+            <button
+              type="button"
+              onClick={() => setModalOpen(false)}
+              className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-            {formError && (
-              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 text-brand-error text-xs font-semibold flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>{formError}</span>
+          <form
+            onSubmit={handleSubmit}
+            onFocusCapture={handleFieldFocus}
+            className="flex-1 flex flex-col min-h-0 overflow-hidden"
+          >
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px] space-y-4">
+              {formError && (
+                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 text-brand-error text-xs font-semibold flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="circuit-name-input"
+                  className="block text-xs font-bold text-foreground"
+                >
+                  Circuit Name <span className="text-brand-error">*</span>
+                </label>
+                <input
+                  id="circuit-name-input"
+                  type="text"
+                  required
+                  autoFocus
+                  placeholder="e.g. Nyinahin Circuit"
+                  enterKeyHint="next"
+                  value={circuitName}
+                  onChange={(e) => {
+                    setCircuitName(e.target.value);
+                    setFormError(null);
+                  }}
+                  className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                />
+                <span className="text-[11px] text-muted-foreground block">
+                  Must be between 2 and 60 characters and unique across the district.
+                </span>
               </div>
-            )}
 
-            <div className="space-y-1.5">
-              <label
-                htmlFor="circuit-name-input"
-                className="block text-xs font-bold text-foreground"
-              >
-                Circuit Name <span className="text-brand-error">*</span>
-              </label>
-              <input
-                id="circuit-name-input"
-                type="text"
-                required
-                autoFocus
-                placeholder="e.g. Nyinahin Circuit"
-                value={circuitName}
-                onChange={(e) => {
-                  setCircuitName(e.target.value);
-                  setFormError(null);
-                }}
-                className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold"
-              />
-              <span className="text-[11px] text-muted-foreground block">
-                Must be between 2 and 60 characters and unique across the district.
-              </span>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="circuit-code-input"
+                  className="block text-xs font-bold text-foreground"
+                >
+                  Circuit Abbreviation / Code (Optional)
+                </label>
+                <input
+                  id="circuit-code-input"
+                  type="text"
+                  placeholder="e.g. NYN"
+                  enterKeyHint="done"
+                  value={circuitCode}
+                  onChange={(e) => setCircuitCode(e.target.value.toUpperCase())}
+                  className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm font-mono font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                />
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label
-                htmlFor="circuit-code-input"
-                className="block text-xs font-bold text-foreground"
-              >
-                Circuit Abbreviation / Code (Optional)
-              </label>
-              <input
-                id="circuit-code-input"
-                type="text"
-                placeholder="e.g. NYN"
-                value={circuitCode}
-                onChange={(e) => setCircuitCode(e.target.value.toUpperCase())}
-                className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-mono font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold"
-              />
+            {/* Fixed Footer Above Keyboard on Mobile, Static on Desktop */}
+            <div
+              className="fixed sm:static left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+              style={{
+                bottom: 'var(--kb, 0px)',
+                paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+              }}
+            >
+              <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setModalOpen(false)}
+                  className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || circuitName.trim().length < 2}
+                  className="h-11 rounded-xl text-xs font-bold bg-brand-navy hover:bg-brand-midBlue text-white border-b-2 border-brand-gold w-full sm:w-auto"
+                >
+                  {isSubmitting ? 'Saving...' : editingCircuit ? 'Save Changes' : 'Save Circuit'}
+                </Button>
+              </DialogFooter>
             </div>
-
-            <DialogFooter className="gap-2 pt-3 flex-col-reverse sm:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setModalOpen(false)}
-                className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting || circuitName.trim().length < 2}
-                className="h-11 rounded-xl text-xs font-bold bg-brand-navy hover:bg-brand-midBlue text-white border-b-2 border-brand-gold w-full sm:w-auto"
-              >
-                {isSubmitting ? 'Saving...' : editingCircuit ? 'Save Changes' : 'Save Circuit'}
-              </Button>
-            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
       {/* Deactivate / Reactivate Confirmation Dialog */}
       <Dialog open={statusConfirmOpen} onOpenChange={setStatusConfirmOpen}>
-        <DialogContent className="sm:max-w-md w-full rounded-2xl p-6">
-          <DialogHeader className="text-left">
-            <DialogTitle className="text-base font-black text-foreground flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              <span>
-                {circuitToToggle?.is_active
-                  ? `Deactivate ${circuitToToggle?.name}?`
-                  : `Reactivate ${circuitToToggle?.name}?`}
-              </span>
-            </DialogTitle>
+        <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-md">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-base font-black text-foreground flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+                <span>
+                  {circuitToToggle?.is_active
+                    ? `Deactivate ${circuitToToggle?.name}?`
+                    : `Reactivate ${circuitToToggle?.name}?`}
+                </span>
+              </DialogTitle>
+            </DialogHeader>
+            <button
+              type="button"
+              onClick={() => setStatusConfirmOpen(false)}
+              className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px]">
             <DialogDescription className="text-xs text-muted-foreground pt-1 leading-relaxed">
               {circuitToToggle?.is_active ? (
                 <>
@@ -526,34 +569,42 @@ export default function AdminCircuitsPage() {
                 <>Reactivating this circuit will make it available for new school assignments.</>
               )}
             </DialogDescription>
-          </DialogHeader>
+          </div>
 
-          <DialogFooter className="gap-2 pt-3 flex-col-reverse sm:flex-row">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setStatusConfirmOpen(false)}
-              className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleConfirmToggleStatus}
-              disabled={isTogglingStatus}
-              className={`h-11 rounded-xl text-xs font-bold text-white w-full sm:w-auto ${
-                circuitToToggle?.is_active
-                  ? 'bg-amber-600 hover:bg-amber-700'
-                  : 'bg-emerald-600 hover:bg-emerald-700'
-              }`}
-            >
-              {isTogglingStatus
-                ? 'Updating...'
-                : circuitToToggle?.is_active
-                ? 'Confirm Deactivation'
-                : 'Confirm Reactivation'}
-            </Button>
-          </DialogFooter>
+          <div
+            className="sticky bottom-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+            style={{
+              bottom: 'var(--kb, 0px)',
+              paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+            }}
+          >
+            <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStatusConfirmOpen(false)}
+                className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleConfirmToggleStatus}
+                disabled={isTogglingStatus}
+                className={`h-11 rounded-xl text-xs font-bold text-white w-full sm:w-auto ${
+                  circuitToToggle?.is_active
+                    ? 'bg-amber-600 hover:bg-amber-700'
+                    : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
+              >
+                {isTogglingStatus
+                  ? 'Updating...'
+                  : circuitToToggle?.is_active
+                  ? 'Confirm Deactivation'
+                  : 'Confirm Reactivation'}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </AdminLayout>

@@ -45,6 +45,7 @@ import {
 import { EDUCATION_LEVELS, LevelId } from '@/lib/levels-config';
 import { formatDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
+import { handleFieldFocus } from '@/hooks/use-visual-viewport';
 
 export default function AdminSchoolsPage() {
   const [schools, setSchools] = React.useState<any[]>([]);
@@ -62,6 +63,8 @@ export default function AdminSchoolsPage() {
   const [schoolName, setSchoolName] = React.useState('');
   const [schoolStatus, setSchoolStatus] = React.useState<'public' | 'private'>('public');
   const [circuitId, setCircuitId] = React.useState('');
+  const [circuitPickerOpen, setCircuitPickerOpen] = React.useState(false);
+  const [circuitPickerSearch, setCircuitPickerSearch] = React.useState('');
   const [emisCode, setEmisCode] = React.useState('');
   const [town, setTown] = React.useState('');
   const [defaultLevels, setDefaultLevels] = React.useState<LevelId[]>(['kg', 'primary']);
@@ -737,282 +740,449 @@ export default function AdminSchoolsPage() {
 
       {/* Full-Screen Add School Modal */}
       <Dialog open={addFormOpen} onOpenChange={setAddFormOpen}>
-        <DialogContent className="sm:max-w-lg w-full max-h-[92vh] overflow-y-auto rounded-2xl p-5 sm:p-6">
-          <DialogHeader className="text-left pb-2 border-b">
-            <DialogTitle className="text-lg font-black text-brand-navy dark:text-brand-gold flex items-center gap-2">
-              <SchoolIcon className="h-5 w-5 text-brand-gold" />
-              <span>Add District School</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Generates the next School Login ID (AMD-XXXX) and a secret 6-digit PIN.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-lg">
+          {/* Header Bar at Top */}
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-lg font-black text-brand-navy dark:text-brand-gold flex items-center gap-2">
+                <SchoolIcon className="h-5 w-5 text-brand-gold shrink-0" />
+                <span>Add District School</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Generates the next School Login ID (AMD-XXXX) and a secret 6-digit PIN.
+              </DialogDescription>
+            </DialogHeader>
+            <button
+              type="button"
+              onClick={() => setAddFormOpen(false)}
+              className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
-          {/* Similar Name Warning Dialog Box */}
-          {similarWarning && (
-            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs space-y-2 mt-2">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-                <span className="font-semibold leading-relaxed">{similarWarning}</span>
-              </div>
-              <div className="flex items-center gap-2 pt-1 justify-end">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSimilarWarning(null)}
-                  className="h-8 text-xs font-bold"
-                >
-                  Edit Name
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleSaveSchool(true)}
-                  disabled={isSubmittingSchool}
-                  className="h-8 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white"
-                >
-                  Confirm &amp; Proceed
-                </Button>
-              </div>
-            </div>
-          )}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSaveSchool(false);
+            }}
+            onFocusCapture={handleFieldFocus}
+            className="flex-1 flex flex-col min-h-0 overflow-hidden"
+          >
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px] space-y-4">
+              {/* Similar Name Warning Dialog Box */}
+              {similarWarning && (
+                <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                    <span className="font-semibold leading-relaxed">{similarWarning}</span>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1 justify-end">
+                    <Button
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                      onClick={() => setSimilarWarning(null)}
+                      className="h-8 text-xs font-bold"
+                    >
+                      Edit Name
+                    </Button>
+                    <Button
+                      size="sm"
+                      type="button"
+                      onClick={() => handleSaveSchool(true)}
+                      disabled={isSubmittingSchool}
+                      className="h-8 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white"
+                    >
+                      Confirm &amp; Proceed
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-          <div className="space-y-4 mt-3">
-            {/* School Name */}
-            <div className="space-y-1">
-              <label className="block text-xs font-bold text-foreground">
-                School Name <span className="text-brand-error">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Nyinahin D/A Basic School"
-                value={schoolName}
-                onChange={(e) => {
-                  setSchoolName(e.target.value);
-                  setSimilarWarning(null);
-                }}
-                className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-gold"
-              />
-            </div>
-
-            {/* Institution Status: Two Big Buttons */}
-            <div className="space-y-1">
-              <label className="block text-xs font-bold text-foreground">
-                Institution Status <span className="text-brand-error">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSchoolStatus('public')}
-                  className={`h-12 rounded-xl text-xs font-extrabold flex items-center justify-center border-2 transition-all ${
-                    schoolStatus === 'public'
-                      ? 'border-brand-navy bg-brand-navy text-white shadow-xs dark:bg-brand-midBlue dark:border-brand-midBlue'
-                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
-                  }`}
-                >
-                  Public (Government)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSchoolStatus('private')}
-                  className={`h-12 rounded-xl text-xs font-extrabold flex items-center justify-center border-2 transition-all ${
-                    schoolStatus === 'private'
-                      ? 'border-purple-700 bg-purple-700 text-white shadow-xs'
-                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
-                  }`}
-                >
-                  Private Institution
-                </button>
-              </div>
-            </div>
-
-            {/* Circuit: Required Dropdown for Both */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
+              {/* 1. School Name (Top priority) */}
+              <div className="space-y-1">
                 <label className="block text-xs font-bold text-foreground">
-                  Circuit Assignment <span className="text-brand-error">*</span>
+                  School Name <span className="text-brand-error">*</span>
                 </label>
-                {circuits.length === 0 && (
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  placeholder="e.g. Nyinahin D/A Basic School"
+                  enterKeyHint="next"
+                  value={schoolName}
+                  onChange={(e) => {
+                    setSchoolName(e.target.value);
+                    setSimilarWarning(null);
+                  }}
+                  className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                />
+              </div>
+
+              {/* 2. Institution Status: Two Big Buttons */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-foreground">
+                  Institution Status <span className="text-brand-error">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSchoolStatus('public')}
+                    className={`h-12 rounded-xl text-xs font-extrabold flex items-center justify-center border-2 transition-all ${
+                      schoolStatus === 'public'
+                        ? 'border-brand-navy bg-brand-navy text-white shadow-xs dark:bg-brand-midBlue dark:border-brand-midBlue'
+                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    Public (Government)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSchoolStatus('private')}
+                    className={`h-12 rounded-xl text-xs font-extrabold flex items-center justify-center border-2 transition-all ${
+                      schoolStatus === 'private'
+                        ? 'border-purple-700 bg-purple-700 text-white shadow-xs'
+                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    Private Institution
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. Circuit: Searchable Full-Screen Picker & Direct Selector */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-foreground">
+                    Circuit Assignment <span className="text-brand-error">*</span>
+                  </label>
                   <button
                     type="button"
                     onClick={() => setInlineAddCircuitOpen(true)}
                     className="text-[11px] font-bold text-brand-midBlue hover:underline"
                   >
-                    + Add a circuit first
+                    + Add new circuit
+                  </button>
+                </div>
+
+                {circuits.filter((c) => c.is_active).length === 0 ? (
+                  <div className="p-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 flex items-center justify-between">
+                    <span className="text-xs font-semibold">No active circuits exist.</span>
+                    <Button
+                      size="sm"
+                      type="button"
+                      onClick={() => setInlineAddCircuitOpen(true)}
+                      className="h-8 text-xs font-bold bg-[#D4AF37] text-[#0A2A66]"
+                    >
+                      Add a circuit first
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setCircuitPickerOpen(true)}
+                    className="flex items-center justify-between h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm font-bold text-left focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  >
+                    <span className={circuitId ? 'text-foreground' : 'text-muted-foreground font-normal'}>
+                      {circuits.find((c) => c.id === circuitId)?.name || 'Tap to select circuit...'}
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 ml-2" />
                   </button>
                 )}
               </div>
 
-              {circuits.filter((c) => c.is_active).length === 0 ? (
-                <div className="p-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 flex items-center justify-between">
-                  <span className="text-xs font-semibold">No active circuits exist.</span>
-                  <Button
-                    size="sm"
-                    onClick={() => setInlineAddCircuitOpen(true)}
-                    className="h-8 text-xs font-bold bg-[#D4AF37] text-[#0A2A66]"
-                  >
-                    Add a circuit first
-                  </Button>
-                </div>
-              ) : (
-                <select
-                  required
-                  value={circuitId}
-                  onChange={(e) => setCircuitId(e.target.value)}
-                  className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                >
-                  <option value="">Select Circuit</option>
-                  {circuits
-                    .filter((c) => c.is_active)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                </select>
-              )}
-            </div>
-
-            {/* Town & EMIS Code */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-foreground">
-                  Town / Community <span className="text-muted-foreground font-normal">(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Nyinahin"
-                  value={town}
-                  onChange={(e) => setTown(e.target.value)}
-                  className="flex h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-foreground">
-                  EMIS Code <span className="text-muted-foreground font-normal">(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 1066320014"
-                  value={emisCode}
-                  onChange={(e) => setEmisCode(e.target.value)}
-                  className="flex h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                />
-              </div>
-            </div>
-
-            {/* Headteacher Name & Phone */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-foreground">
-                  Headteacher Name <span className="text-muted-foreground font-normal">(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Can be filled later"
-                  value={headteacherName}
-                  onChange={(e) => setHeadteacherName(e.target.value)}
-                  className="flex h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-foreground">
-                  Headteacher Phone <span className="text-muted-foreground font-normal">(Optional)</span>
-                </label>
-                <input
-                  type="tel"
-                  placeholder="024XXXXXXX"
-                  value={headteacherPhone}
-                  onChange={(e) => setHeadteacherPhone(e.target.value)}
-                  className="flex h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                />
-              </div>
-            </div>
-
-            {/* Starting Levels */}
-            <div className="space-y-1.5 pt-1">
-              <label className="block text-xs font-bold text-foreground">
-                Starting Levels
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {EDUCATION_LEVELS.map((lvl) => (
-                  <label
-                    key={lvl.id}
-                    className="flex items-center gap-2 p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
-                  >
-                    <Checkbox
-                      checked={defaultLevels.includes(lvl.id)}
-                      onCheckedChange={() => handleLevelToggle(lvl.id)}
-                    />
-                    <span>{lvl.label}</span>
+              {/* Town & EMIS Code */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-foreground">
+                    Town / Community <span className="text-muted-foreground font-normal">(Optional)</span>
                   </label>
-                ))}
+                  <input
+                    type="text"
+                    placeholder="e.g. Nyinahin"
+                    enterKeyHint="next"
+                    value={town}
+                    onChange={(e) => setTown(e.target.value)}
+                    className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-foreground">
+                    EMIS Code <span className="text-muted-foreground font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="e.g. 1066320014"
+                    enterKeyHint="next"
+                    value={emisCode}
+                    onChange={(e) => setEmisCode(e.target.value)}
+                    className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  />
+                </div>
               </div>
+
+              {/* Headteacher Name & Phone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-foreground">
+                    Headteacher Name <span className="text-muted-foreground font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Can be filled later"
+                    enterKeyHint="next"
+                    value={headteacherName}
+                    onChange={(e) => setHeadteacherName(e.target.value)}
+                    className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-foreground">
+                    Headteacher Phone <span className="text-muted-foreground font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="024XXXXXXX"
+                    enterKeyHint="done"
+                    value={headteacherPhone}
+                    onChange={(e) => setHeadteacherPhone(e.target.value)}
+                    className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  />
+                </div>
+              </div>
+
+              {/* Starting Levels */}
+              <div className="space-y-1.5 pt-1">
+                <label className="block text-xs font-bold text-foreground">
+                  Starting Levels
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {EDUCATION_LEVELS.map((lvl) => (
+                    <label
+                      key={lvl.id}
+                      className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
+                    >
+                      <Checkbox
+                        checked={defaultLevels.includes(lvl.id)}
+                        onCheckedChange={() => handleLevelToggle(lvl.id)}
+                      />
+                      <span>{lvl.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Sticky Footer Above Keyboard */}
+            <div
+              className="fixed sm:static left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+              style={{
+                bottom: 'var(--kb, 0px)',
+                paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+              }}
+            >
+              <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAddFormOpen(false)}
+                  className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmittingSchool || !schoolName.trim() || !circuitId}
+                  className="h-11 rounded-xl text-xs font-bold bg-brand-navy hover:bg-brand-midBlue text-white border-b-2 border-brand-gold w-full sm:w-auto"
+                >
+                  {isSubmittingSchool ? 'Creating...' : 'Save & Issue PIN'}
+                </Button>
+              </DialogFooter>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Searchable Full-Screen Circuit Picker Modal */}
+      <Dialog open={circuitPickerOpen} onOpenChange={setCircuitPickerOpen}>
+        <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-md">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-base font-black text-brand-navy dark:text-brand-gold flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-brand-gold shrink-0" />
+                <span>Select District Circuit</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Pick a circuit to assign this school to.
+              </DialogDescription>
+            </DialogHeader>
+            <button
+              type="button"
+              onClick={() => setCircuitPickerOpen(false)}
+              className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="px-4 py-3 sm:px-0 sm:py-2 shrink-0 border-b border-slate-100 dark:border-slate-800">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search circuit by name..."
+                autoFocus
+                enterKeyHint="search"
+                value={circuitPickerSearch}
+                onChange={(e) => setCircuitPickerSearch(e.target.value)}
+                className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-10 pr-3.5 text-base sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold"
+              />
             </div>
           </div>
 
-          <DialogFooter className="gap-2 pt-4 border-t mt-3 flex-col-reverse sm:flex-row">
+          <div className="flex-1 overflow-y-auto px-4 py-3 sm:px-0 sm:py-2 space-y-2 pb-[130px]">
+            {circuits
+              .filter(
+                (c) =>
+                  c.is_active &&
+                  c.name.toLowerCase().includes(circuitPickerSearch.toLowerCase())
+              )
+              .map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    setCircuitId(c.id);
+                    setCircuitPickerOpen(false);
+                    setCircuitPickerSearch('');
+                  }}
+                  className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
+                    circuitId === c.id
+                      ? 'border-brand-gold bg-amber-50/70 dark:bg-amber-950/40 font-extrabold text-brand-navy dark:text-brand-gold'
+                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-foreground font-semibold'
+                  }`}
+                >
+                  <div>
+                    <div className="text-sm font-bold">{c.name}</div>
+                    {c.code && (
+                      <div className="text-[11px] font-mono text-muted-foreground">
+                        Code: {c.code}
+                      </div>
+                    )}
+                  </div>
+                  {circuitId === c.id && (
+                    <CheckCircle2 className="h-5 w-5 text-brand-gold shrink-0" />
+                  )}
+                </button>
+              ))}
+            {circuits.filter(
+              (c) =>
+                c.is_active &&
+                c.name.toLowerCase().includes(circuitPickerSearch.toLowerCase())
+            ).length === 0 && (
+              <div className="p-8 text-center text-xs text-muted-foreground">
+                No active circuits match &quot;{circuitPickerSearch}&quot;
+              </div>
+            )}
+          </div>
+
+          <div
+            className="fixed sm:static left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+            style={{
+              bottom: 'var(--kb, 0px)',
+              paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+            }}
+          >
             <Button
               type="button"
               variant="outline"
-              onClick={() => setAddFormOpen(false)}
-              className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
+              onClick={() => {
+                setCircuitPickerOpen(false);
+                setCircuitPickerSearch('');
+              }}
+              className="w-full h-11 rounded-xl text-xs font-bold"
             >
-              Cancel
+              Done
             </Button>
-            <Button
-              type="button"
-              onClick={() => handleSaveSchool(false)}
-              disabled={isSubmittingSchool || !schoolName.trim() || !circuitId}
-              className="h-11 rounded-xl text-xs font-bold bg-brand-navy hover:bg-brand-midBlue text-white border-b-2 border-brand-gold w-full sm:w-auto"
-            >
-              {isSubmittingSchool ? 'Creating...' : 'Save & Issue PIN'}
-            </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Inline Add Circuit Bottom Sheet / Modal */}
       <Dialog open={inlineAddCircuitOpen} onOpenChange={setInlineAddCircuitOpen}>
-        <DialogContent className="sm:max-w-md w-full rounded-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-brand-navy dark:text-brand-gold">
-              Add Circuit First
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Every school must be attached to a circuit. Enter a circuit name to proceed.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-md">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-base font-bold text-brand-navy dark:text-brand-gold">
+                Add Circuit First
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Every school must be attached to a circuit. Enter a circuit name to proceed.
+              </DialogDescription>
+            </DialogHeader>
+            <button
+              type="button"
+              onClick={() => setInlineAddCircuitOpen(false)}
+              className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
-          <form onSubmit={handleCreateInlineCircuit} className="space-y-4 mt-2">
-            <input
-              type="text"
-              required
-              autoFocus
-              placeholder="e.g. Nyinahin Circuit"
-              value={newCircuitName}
-              onChange={(e) => setNewCircuitName(e.target.value)}
-              className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-gold"
-            />
-            <DialogFooter className="gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setInlineAddCircuitOpen(false)}
-                className="h-10 text-xs font-bold"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isCreatingInlineCircuit || newCircuitName.trim().length < 2}
-                className="h-10 text-xs font-bold bg-brand-navy text-white"
-              >
-                {isCreatingInlineCircuit ? 'Creating...' : 'Create Circuit'}
-              </Button>
-            </DialogFooter>
+          <form
+            onSubmit={handleCreateInlineCircuit}
+            onFocusCapture={handleFieldFocus}
+            className="flex-1 flex flex-col min-h-0 overflow-hidden"
+          >
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px] space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-foreground">Circuit Name</label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  enterKeyHint="done"
+                  placeholder="e.g. Nyinahin Circuit"
+                  value={newCircuitName}
+                  onChange={(e) => setNewCircuitName(e.target.value)}
+                  className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                />
+              </div>
+            </div>
+
+            <div
+              className="fixed sm:static left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+              style={{
+                bottom: 'var(--kb, 0px)',
+                paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+              }}
+            >
+              <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setInlineAddCircuitOpen(false)}
+                  className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isCreatingInlineCircuit || newCircuitName.trim().length < 2}
+                  className="h-11 rounded-xl text-xs font-bold bg-brand-navy hover:bg-brand-midBlue text-white border-b-2 border-brand-gold w-full sm:w-auto"
+                >
+                  {isCreatingInlineCircuit ? 'Creating...' : 'Create Circuit'}
+                </Button>
+              </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
@@ -1028,82 +1198,106 @@ export default function AdminSchoolsPage() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-md w-full rounded-2xl p-6 text-center">
-          <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center mx-auto mb-2">
-            <CheckCircle2 className="h-8 w-8" />
+        <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-md">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-lg font-black text-brand-navy dark:text-white flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                <span>{credentialData?.title || 'School Created Successfully'}</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                {credentialData?.school_name} &bull; {credentialData?.circuit_name}
+              </DialogDescription>
+            </DialogHeader>
+            <button
+              type="button"
+              onClick={() => {
+                setCredentialData(null);
+                setCreatedCredentialModalOpen(false);
+              }}
+              className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-lg font-black text-brand-navy dark:text-white">
-              {credentialData?.title || 'School Created Successfully'}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              {credentialData?.school_name} &bull; {credentialData?.circuit_name}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="my-5 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-3">
-            <div>
-              <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-                School Login ID
-              </span>
-              <span className="text-xl font-mono font-black text-brand-navy dark:text-brand-gold">
-                {credentialData?.school_login_id}
-              </span>
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px] space-y-4 text-center">
+            <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center mx-auto mb-2">
+              <CheckCircle2 className="h-8 w-8" />
             </div>
 
-            <div>
-              <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-                6-Digit Secret PIN
-              </span>
-              <span className="text-4xl font-mono font-black tracking-widest text-[#0A2A66] dark:text-white block mt-1">
-                {credentialData?.pin}
-              </span>
+            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-3">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                  School Login ID
+                </span>
+                <span className="text-xl font-mono font-black text-brand-navy dark:text-brand-gold">
+                  {credentialData?.school_login_id}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                  6-Digit Secret PIN
+                </span>
+                <span className="text-4xl font-mono font-black tracking-widest text-[#0A2A66] dark:text-white block mt-1">
+                  {credentialData?.pin}
+                </span>
+              </div>
+
+              {/* Warning: Shown only once */}
+              <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-300 text-amber-900 dark:text-amber-200 text-xs font-semibold flex items-center justify-center gap-1.5">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                <span>This PIN is shown only once. Please copy or share it now.</span>
+              </div>
             </div>
 
-            {/* Warning: Shown only once */}
-            <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-300 text-amber-900 dark:text-amber-200 text-xs font-semibold flex items-center justify-center gap-1.5">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
-              <span>This PIN is shown only once. Please copy or share it now.</span>
-            </div>
-          </div>
+            {/* Action Buttons: Copy, Share, Print slip */}
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleCopyReadyMessage(credentialData)}
+                  className="h-11 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+                >
+                  <Copy className="h-4 w-4" />
+                  <span>Copy Message</span>
+                </Button>
 
-          {/* Action Buttons: Copy, Share, Print slip, Done */}
-          <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  onClick={() => handleShareMessage(credentialData)}
+                  className="h-11 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-1.5"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span>Share WhatsApp</span>
+                </Button>
+              </div>
+
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => handleCopyReadyMessage(credentialData)}
-                className="h-11 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+                onClick={() => {
+                  setSlipToPrint(credentialData);
+                  setPrintSlipOpen(true);
+                }}
+                className="w-full h-11 rounded-xl text-xs font-bold border-brand-navy/30 dark:border-slate-700 flex items-center justify-center gap-1.5"
               >
-                <Copy className="h-4 w-4" />
-                <span>Copy Message</span>
-              </Button>
-
-              <Button
-                type="button"
-                onClick={() => handleShareMessage(credentialData)}
-                className="h-11 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-1.5"
-              >
-                <Share2 className="h-4 w-4" />
-                <span>Share WhatsApp</span>
+                <Printer className="h-4 w-4" />
+                <span>Print A5 Official Slip</span>
               </Button>
             </div>
+          </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setSlipToPrint(credentialData);
-                setPrintSlipOpen(true);
-              }}
-              className="w-full h-11 rounded-xl text-xs font-bold border-brand-navy/30 dark:border-slate-700 flex items-center justify-center gap-1.5"
-            >
-              <Printer className="h-4 w-4" />
-              <span>Print A5 Official Slip</span>
-            </Button>
-
+          <div
+            className="fixed sm:static left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+            style={{
+              bottom: 'var(--kb, 0px)',
+              paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+            }}
+          >
             <Button
               type="button"
               onClick={() => {
@@ -1120,12 +1314,32 @@ export default function AdminSchoolsPage() {
 
       {/* School Detail Modal / Screen */}
       <Dialog open={schoolDetailOpen} onOpenChange={setSchoolDetailOpen}>
-        <DialogContent className="sm:max-w-lg w-full max-h-[92vh] overflow-y-auto rounded-2xl p-5 sm:p-6">
-          {selectedSchool && (
-            <div className="space-y-5">
-              {/* Header */}
-              <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2 mb-1">
+        <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-lg">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-lg font-black text-foreground flex items-center gap-2">
+                <SchoolIcon className="h-5 w-5 text-brand-gold shrink-0" />
+                <span className="truncate">{selectedSchool?.name || 'School Profile'}</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                {selectedSchool?.school_login_id} &bull; {selectedSchool?.circuit_name} Circuit
+              </DialogDescription>
+            </DialogHeader>
+            <button
+              type="button"
+              onClick={() => setSchoolDetailOpen(false)}
+              className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px]">
+            {selectedSchool && (
+              <div className="space-y-5">
+                {/* Status Badges */}
+                <div className="flex items-center gap-2 pb-1">
                   <span className="font-mono text-xs font-black px-2 py-0.5 rounded bg-blue-50 dark:bg-slate-800 border border-blue-200">
                     {selectedSchool.school_login_id}
                   </span>
@@ -1146,234 +1360,276 @@ export default function AdminSchoolsPage() {
                     </Badge>
                   )}
                 </div>
-                <h2 className="text-lg font-black text-foreground">
-                  {selectedSchool.name}
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  {selectedSchool.circuit_name} Circuit
-                </p>
+
+                {/* Information Grid */}
+                <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl">
+                  <div>
+                    <span className="text-muted-foreground block text-[10px] uppercase font-bold">
+                      Town / Community
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {selectedSchool.town || '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px] uppercase font-bold">
+                      EMIS Code
+                    </span>
+                    <span className="font-mono font-semibold text-foreground">
+                      {selectedSchool.emis_code || '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px] uppercase font-bold">
+                      Headteacher
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {selectedSchool.headteacher_name || 'Not assigned'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px] uppercase font-bold">
+                      Phone Contact
+                    </span>
+                    <span className="font-mono font-semibold text-foreground">
+                      {selectedSchool.headteacher_phone || '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px] uppercase font-bold">
+                      Active Round Status
+                    </span>
+                    <span className="font-bold capitalize text-foreground">
+                      {selectedSchool.submission_status || 'not_started'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px] uppercase font-bold">
+                      Total Returns Filed
+                    </span>
+                    <span className="font-bold text-foreground">
+                      {selectedSchool.total_submissions_count || 0}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Reset History */}
+                {selectedSchool.last_pin_reset_at && (
+                  <div className="p-2.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 text-xs text-blue-900 dark:text-blue-200">
+                    <span className="font-bold block">Last PIN Reset</span>
+                    <span className="text-[11px]">
+                      Reset on {formatDateTime(selectedSchool.last_pin_reset_at)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Action Buttons on School Detail */}
+                <div className="space-y-2 pt-2 border-t">
+                  {/* Reset PIN (Primary) */}
+                  <Button
+                    type="button"
+                    onClick={() => setResetPinConfirmOpen(true)}
+                    className="w-full h-11 rounded-xl text-xs font-bold bg-[#D4AF37] hover:bg-[#b5952f] text-[#0A2A66] flex items-center justify-center gap-2"
+                  >
+                    <KeyRound className="h-4 w-4 stroke-[2.5]" />
+                    <span>Reset PIN &amp; Print Slip</span>
+                  </Button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Lock / Unlock */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleToggleLock}
+                      className="h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+                    >
+                      {selectedSchool.account_status === 'locked' ? (
+                        <>
+                          <Unlock className="h-4 w-4 text-emerald-600" />
+                          <span>Unlock Account</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="h-4 w-4 text-amber-600" />
+                          <span>Lock Account</span>
+                        </>
+                      )}
+                    </Button>
+
+                    {/* Move Circuit */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setTargetCircuitId(selectedSchool.circuit_id);
+                        setMoveCircuitOpen(true);
+                      }}
+                      className="h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+                    >
+                      <MapPin className="h-4 w-4 text-brand-midBlue" />
+                      <span>Move Circuit</span>
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Edit details */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setEditName(selectedSchool.name);
+                        setEditTown(selectedSchool.town || '');
+                        setEditEmis(selectedSchool.emis_code || '');
+                        setEditHtName(selectedSchool.headteacher_name || '');
+                        setEditHtPhone(selectedSchool.headteacher_phone || '');
+                        setEditSchoolOpen(true);
+                      }}
+                      className="h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                      <span>Edit Details</span>
+                    </Button>
+
+                    {/* Copy Web Address */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const webUrl =
+                          typeof window !== 'undefined'
+                            ? window.location.origin
+                            : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+                        navigator.clipboard.writeText(webUrl);
+                        toast.success('Login portal URL copied!');
+                      }}
+                      className="h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      <span>Copy Portal URL</span>
+                    </Button>
+                  </div>
+
+                  {/* Deactivate / Reactivate */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleToggleActive}
+                    className={`w-full h-9 rounded-xl text-xs font-semibold ${
+                      selectedSchool.is_active ? 'text-red-600' : 'text-emerald-600'
+                    }`}
+                  >
+                    {selectedSchool.is_active
+                      ? 'Deactivate School (Retains submissions)'
+                      : 'Reactivate School'}
+                  </Button>
+                </div>
               </div>
+            )}
+          </div>
 
-              {/* Information Grid */}
-              <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl">
-                <div>
-                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">
-                    Town / Community
-                  </span>
-                  <span className="font-semibold text-foreground">
-                    {selectedSchool.town || '—'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">
-                    EMIS Code
-                  </span>
-                  <span className="font-mono font-semibold text-foreground">
-                    {selectedSchool.emis_code || '—'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">
-                    Headteacher
-                  </span>
-                  <span className="font-semibold text-foreground">
-                    {selectedSchool.headteacher_name || 'Not assigned'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">
-                    Phone Contact
-                  </span>
-                  <span className="font-mono font-semibold text-foreground">
-                    {selectedSchool.headteacher_phone || '—'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">
-                    Active Round Status
-                  </span>
-                  <span className="font-bold capitalize text-foreground">
-                    {selectedSchool.submission_status || 'not_started'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">
-                    Total Returns Filed
-                  </span>
-                  <span className="font-bold text-foreground">
-                    {selectedSchool.total_submissions_count || 0}
-                  </span>
-                </div>
-              </div>
-
-              {/* Reset History */}
-              {selectedSchool.last_pin_reset_at && (
-                <div className="p-2.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 text-xs text-blue-900 dark:text-blue-200">
-                  <span className="font-bold block">Last PIN Reset</span>
-                  <span className="text-[11px]">
-                    Reset on {formatDateTime(selectedSchool.last_pin_reset_at)}
-                  </span>
-                </div>
-              )}
-
-              {/* Action Buttons on School Detail */}
-              <div className="space-y-2 pt-2 border-t">
-                {/* Reset PIN (Primary) */}
-                <Button
-                  type="button"
-                  onClick={() => setResetPinConfirmOpen(true)}
-                  className="w-full h-11 rounded-xl text-xs font-bold bg-[#D4AF37] hover:bg-[#b5952f] text-[#0A2A66] flex items-center justify-center gap-2"
-                >
-                  <KeyRound className="h-4 w-4 stroke-[2.5]" />
-                  <span>Reset PIN &amp; Print Slip</span>
-                </Button>
-
-                <div className="grid grid-cols-2 gap-2">
-                  {/* Lock / Unlock */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleToggleLock}
-                    className="h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
-                  >
-                    {selectedSchool.account_status === 'locked' ? (
-                      <>
-                        <Unlock className="h-4 w-4 text-emerald-600" />
-                        <span>Unlock Account</span>
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="h-4 w-4 text-amber-600" />
-                        <span>Lock Account</span>
-                      </>
-                    )}
-                  </Button>
-
-                  {/* Move Circuit */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setTargetCircuitId(selectedSchool.circuit_id);
-                      setMoveCircuitOpen(true);
-                    }}
-                    className="h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
-                  >
-                    <MapPin className="h-4 w-4 text-brand-midBlue" />
-                    <span>Move Circuit</span>
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  {/* Edit details */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setEditName(selectedSchool.name);
-                      setEditTown(selectedSchool.town || '');
-                      setEditEmis(selectedSchool.emis_code || '');
-                      setEditHtName(selectedSchool.headteacher_name || '');
-                      setEditHtPhone(selectedSchool.headteacher_phone || '');
-                      setEditSchoolOpen(true);
-                    }}
-                    className="h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                    <span>Edit Details</span>
-                  </Button>
-
-                  {/* Copy Web Address */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const webUrl =
-                        typeof window !== 'undefined'
-                          ? window.location.origin
-                          : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-                      navigator.clipboard.writeText(webUrl);
-                      toast.success('Login portal URL copied!');
-                    }}
-                    className="h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    <span>Copy Portal URL</span>
-                  </Button>
-                </div>
-
-                {/* Deactivate / Reactivate */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleToggleActive}
-                  className={`w-full h-9 rounded-xl text-xs font-semibold ${
-                    selectedSchool.is_active ? 'text-red-600' : 'text-emerald-600'
-                  }`}
-                >
-                  {selectedSchool.is_active
-                    ? 'Deactivate School (Retains submissions)'
-                    : 'Reactivate School'}
-                </Button>
-              </div>
-            </div>
-          )}
+          <div
+            className="fixed sm:static left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+            style={{
+              bottom: 'var(--kb, 0px)',
+              paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+            }}
+          >
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSchoolDetailOpen(false)}
+              className="w-full h-11 rounded-xl text-xs font-bold"
+            >
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Reset PIN Confirmation Dialog */}
       <Dialog open={resetPinConfirmOpen} onOpenChange={setResetPinConfirmOpen}>
-        <DialogContent className="sm:max-w-md w-full rounded-2xl p-6">
-          <DialogHeader className="text-left">
-            <DialogTitle className="text-base font-black text-brand-navy dark:text-white flex items-center gap-2">
-              <KeyRound className="h-5 w-5 text-amber-500" />
-              <span>Reset PIN for {selectedSchool?.name}?</span>
-            </DialogTitle>
+        <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-md">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-base font-black text-brand-navy dark:text-white flex items-center gap-2">
+                <KeyRound className="h-5 w-5 text-amber-500 shrink-0" />
+                <span>Reset PIN for {selectedSchool?.name}?</span>
+              </DialogTitle>
+            </DialogHeader>
+            <button
+              type="button"
+              onClick={() => setResetPinConfirmOpen(false)}
+              className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px]">
             <DialogDescription className="text-xs text-muted-foreground pt-1 leading-relaxed">
               This will stop the old PIN working immediately. Any active session for this school will
               be signed out, and the headteacher must change their PIN upon their next sign-in.
             </DialogDescription>
-          </DialogHeader>
+          </div>
 
-          <DialogFooter className="gap-2 pt-3 flex-col-reverse sm:flex-row">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setResetPinConfirmOpen(false)}
-              className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleExecuteResetPin}
-              disabled={isResettingPin}
-              className="h-11 rounded-xl text-xs font-bold bg-[#D4AF37] hover:bg-[#b5952f] text-[#0A2A66] w-full sm:w-auto"
-            >
-              {isResettingPin ? 'Resetting...' : 'Confirm PIN Reset'}
-            </Button>
-          </DialogFooter>
+          <div
+            className="fixed sm:static left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+            style={{
+              bottom: 'var(--kb, 0px)',
+              paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+            }}
+          >
+            <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setResetPinConfirmOpen(false)}
+                className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleExecuteResetPin}
+                disabled={isResettingPin}
+                className="h-11 rounded-xl text-xs font-bold bg-[#D4AF37] hover:bg-[#b5952f] text-[#0A2A66] w-full sm:w-auto"
+              >
+                {isResettingPin ? 'Resetting...' : 'Confirm PIN Reset'}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Move Circuit Dialog */}
       <Dialog open={moveCircuitOpen} onOpenChange={setMoveCircuitOpen}>
-        <DialogContent className="sm:max-w-md w-full rounded-2xl p-6">
-          <DialogHeader className="text-left">
-            <DialogTitle className="text-base font-bold text-brand-navy dark:text-white">
-              Move to Another Circuit
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Select a new circuit for {selectedSchool?.name}. The school&apos;s Login ID and PIN will
-              keep working without change.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-md">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-base font-bold text-brand-navy dark:text-white">
+                Move to Another Circuit
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Select a new circuit for {selectedSchool?.name}. The school&apos;s Login ID and PIN will
+                keep working without change.
+              </DialogDescription>
+            </DialogHeader>
+            <button
+              type="button"
+              onClick={() => setMoveCircuitOpen(false)}
+              className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
-          <div className="space-y-3 my-2">
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px] space-y-3">
             <select
               value={targetCircuitId}
               onChange={(e) => setTargetCircuitId(e.target.value)}
-              className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold"
+              className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold"
             >
               {circuits
                 .filter((c) => c.is_active)
@@ -1385,159 +1641,259 @@ export default function AdminSchoolsPage() {
             </select>
           </div>
 
-          <DialogFooter className="gap-2 pt-2 flex-col-reverse sm:flex-row">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setMoveCircuitOpen(false)}
-              className="h-10 text-xs font-bold"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleMoveCircuit}
-              disabled={isMovingCircuit || targetCircuitId === selectedSchool?.circuit_id}
-              className="h-10 text-xs font-bold bg-brand-navy text-white"
-            >
-              {isMovingCircuit ? 'Moving...' : 'Confirm Move'}
-            </Button>
-          </DialogFooter>
+          <div
+            className="fixed sm:static left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+            style={{
+              bottom: 'var(--kb, 0px)',
+              paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+            }}
+          >
+            <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setMoveCircuitOpen(false)}
+                className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleMoveCircuit}
+                disabled={isMovingCircuit || targetCircuitId === selectedSchool?.circuit_id}
+                className="h-11 rounded-xl text-xs font-bold bg-brand-navy hover:bg-brand-midBlue text-white w-full sm:w-auto"
+              >
+                {isMovingCircuit ? 'Moving...' : 'Confirm Move'}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Edit School Details Dialog */}
       <Dialog open={editSchoolOpen} onOpenChange={setEditSchoolOpen}>
-        <DialogContent className="sm:max-w-md w-full rounded-2xl p-6">
-          <DialogHeader className="text-left">
-            <DialogTitle className="text-base font-bold text-brand-navy dark:text-white">
-              Edit School Details
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Update institutional metadata for official reporting.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 my-2">
-            <div className="space-y-1">
-              <label className="text-xs font-bold block">School Name</label>
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="flex h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-semibold"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <label className="text-xs font-bold block">Town / Community</label>
-                <input
-                  type="text"
-                  value={editTown}
-                  onChange={(e) => setEditTown(e.target.value)}
-                  className="flex h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold block">EMIS Code</label>
-                <input
-                  type="text"
-                  value={editEmis}
-                  onChange={(e) => setEditEmis(e.target.value)}
-                  className="flex h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-mono"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <label className="text-xs font-bold block">Headteacher Name</label>
-                <input
-                  type="text"
-                  value={editHtName}
-                  onChange={(e) => setEditHtName(e.target.value)}
-                  className="flex h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold block">Phone Contact</label>
-                <input
-                  type="tel"
-                  value={editHtPhone}
-                  onChange={(e) => setEditHtPhone(e.target.value)}
-                  className="flex h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-mono"
-                />
-              </div>
-            </div>
+        <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-md">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-base font-bold text-brand-navy dark:text-white">
+                Edit School Details
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Update institutional metadata for official reporting.
+              </DialogDescription>
+            </DialogHeader>
+            <button
+              type="button"
+              onClick={() => setEditSchoolOpen(false)}
+              className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
-          <DialogFooter className="gap-2 pt-2 flex-col-reverse sm:flex-row">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setEditSchoolOpen(false)}
-              className="h-10 text-xs font-bold"
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSaveEditSchool();
+            }}
+            onFocusCapture={handleFieldFocus}
+            className="flex-1 flex flex-col min-h-0 overflow-hidden"
+          >
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px] space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold block text-foreground">School Name</label>
+                <input
+                  type="text"
+                  required
+                  enterKeyHint="next"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold block text-foreground">Town / Community</label>
+                  <input
+                    type="text"
+                    enterKeyHint="next"
+                    value={editTown}
+                    onChange={(e) => setEditTown(e.target.value)}
+                    className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold block text-foreground">EMIS Code</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    enterKeyHint="next"
+                    value={editEmis}
+                    onChange={(e) => setEditEmis(e.target.value)}
+                    className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold block text-foreground">Headteacher Name</label>
+                  <input
+                    type="text"
+                    enterKeyHint="next"
+                    value={editHtName}
+                    onChange={(e) => setEditHtName(e.target.value)}
+                    className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold block text-foreground">Phone Contact</label>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    enterKeyHint="done"
+                    value={editHtPhone}
+                    onChange={(e) => setEditHtPhone(e.target.value)}
+                    className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="fixed sm:static left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+              style={{
+                bottom: 'var(--kb, 0px)',
+                paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+              }}
             >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSaveEditSchool}
-              disabled={isSavingEdit || !editName.trim()}
-              className="h-10 text-xs font-bold bg-brand-navy text-white"
-            >
-              {isSavingEdit ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </DialogFooter>
+              <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditSchoolOpen(false)}
+                  className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSavingEdit || !editName.trim()}
+                  className="h-11 rounded-xl text-xs font-bold bg-brand-navy hover:bg-brand-midBlue text-white border-b-2 border-brand-gold w-full sm:w-auto"
+                >
+                  {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </DialogFooter>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
       {/* Bulk Circuit PINs Dialog */}
       <Dialog open={bulkCircuitModalOpen} onOpenChange={setBulkCircuitModalOpen}>
-        <DialogContent className="sm:max-w-lg w-full max-h-[90vh] overflow-y-auto rounded-2xl p-6">
-          <DialogHeader className="text-left">
-            <DialogTitle className="text-base font-black text-brand-navy dark:text-white flex items-center gap-2">
-              <KeyRound className="h-5 w-5 text-brand-gold" />
-              <span>New PINs for a Whole Circuit</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground pt-1 leading-relaxed">
-              Pick a circuit to generate fresh 6-digit random PINs for all schools in that circuit.
-              Old PINs will immediately stop working.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-lg">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-base font-black text-brand-navy dark:text-white flex items-center gap-2">
+                <KeyRound className="h-5 w-5 text-brand-gold shrink-0" />
+                <span>New PINs for a Whole Circuit</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground pt-1 leading-relaxed">
+                Pick a circuit to generate fresh 6-digit random PINs for all schools in that circuit.
+                Old PINs will immediately stop working.
+              </DialogDescription>
+            </DialogHeader>
+            <button
+              type="button"
+              onClick={() => setBulkCircuitModalOpen(false)}
+              className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
-          {!bulkResultSlips ? (
-            <div className="space-y-4 my-3">
-              <div className="space-y-1">
-                <label className="text-xs font-bold block">Pick Circuit</label>
-                <select
-                  value={selectedCircuitForBulk}
-                  onChange={(e) => setSelectedCircuitForBulk(e.target.value)}
-                  className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-bold"
-                >
-                  {circuits
-                    .filter((c) => c.is_active)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                </select>
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px] space-y-4">
+            {!bulkResultSlips ? (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold block text-foreground">Pick Circuit</label>
+                  <select
+                    value={selectedCircuitForBulk}
+                    onChange={(e) => setSelectedCircuitForBulk(e.target.value)}
+                    className="flex h-11 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-base sm:text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  >
+                    {circuits
+                      .filter((c) => c.is_active)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 text-amber-900 dark:text-amber-200 text-xs font-semibold flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                  <span>
+                    Warning: Existing headteacher sessions for this circuit will be invalidated. PINs
+                    will be shown only once on this sheet.
+                  </span>
+                </div>
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-600">
+                    Generated {bulkResultSlips.length} new PIN slips (Shown only once)
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={handleDownloadBulkCSV}
+                    className="h-8 text-xs font-bold bg-brand-navy text-white flex items-center gap-1"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    <span>Download CSV</span>
+                  </Button>
+                </div>
 
-              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 text-amber-900 dark:text-amber-200 text-xs font-semibold flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-                <span>
-                  Warning: Existing headteacher sessions for this circuit will be invalidated. PINs
-                  will be shown only once on this sheet.
-                </span>
+                {/* Printable Table of PINs */}
+                <div className="max-h-72 overflow-y-auto border rounded-xl divide-y text-xs">
+                  {bulkResultSlips.map((item) => (
+                    <div
+                      key={item.school_id}
+                      className="p-2.5 flex items-center justify-between bg-slate-50 dark:bg-slate-800"
+                    >
+                      <div>
+                        <span className="font-bold text-foreground block">{item.school_name}</span>
+                        <span className="font-mono text-[11px] text-muted-foreground">
+                          {item.school_login_id}
+                        </span>
+                      </div>
+                      <span className="font-mono font-black text-base text-brand-navy dark:text-brand-gold">
+                        {item.pin}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
+          </div>
 
-              <DialogFooter className="gap-2 pt-2 flex-col-reverse sm:flex-row">
+          <div
+            className="fixed sm:static left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+            style={{
+              bottom: 'var(--kb, 0px)',
+              paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+            }}
+          >
+            {!bulkResultSlips ? (
+              <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setBulkCircuitModalOpen(false)}
-                  className="h-10 text-xs font-bold"
+                  className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
@@ -1545,167 +1901,155 @@ export default function AdminSchoolsPage() {
                   type="button"
                   onClick={handleGenerateBulkCircuitPins}
                   disabled={isGeneratingBulk || !selectedCircuitForBulk}
-                  className="h-10 text-xs font-bold bg-[#D4AF37] text-[#0A2A66]"
+                  className="h-11 rounded-xl text-xs font-bold bg-[#D4AF37] hover:bg-[#b5952f] text-[#0A2A66] w-full sm:w-auto"
                 >
                   {isGeneratingBulk ? 'Generating...' : 'Confirm & Generate'}
                 </Button>
               </DialogFooter>
-            </div>
-          ) : (
-            <div className="space-y-4 my-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-emerald-600">
-                  Generated {bulkResultSlips.length} new PIN slips (Shown only once)
-                </span>
-                <Button
-                  size="sm"
-                  onClick={handleDownloadBulkCSV}
-                  className="h-8 text-xs font-bold bg-brand-navy text-white flex items-center gap-1"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  <span>Download CSV</span>
-                </Button>
-              </div>
-
-              {/* Printable Table of PINs */}
-              <div className="max-h-60 overflow-y-auto border rounded-xl divide-y text-xs">
-                {bulkResultSlips.map((item) => (
-                  <div
-                    key={item.school_id}
-                    className="p-2.5 flex items-center justify-between bg-slate-50 dark:bg-slate-800"
-                  >
-                    <div>
-                      <span className="font-bold text-foreground block">{item.school_name}</span>
-                      <span className="font-mono text-[11px] text-muted-foreground">
-                        {item.school_login_id}
-                      </span>
-                    </div>
-                    <span className="font-mono font-black text-base text-brand-navy dark:text-brand-gold">
-                      {item.pin}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <DialogFooter className="pt-2">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setBulkResultSlips(null);
-                    setBulkCircuitModalOpen(false);
-                  }}
-                  className="w-full h-10 text-xs font-bold bg-brand-navy text-white"
-                >
-                  Done (Close)
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
+            ) : (
+              <Button
+                type="button"
+                onClick={() => {
+                  setBulkResultSlips(null);
+                  setBulkCircuitModalOpen(false);
+                }}
+                className="w-full h-11 rounded-xl text-xs font-bold bg-brand-navy hover:bg-brand-midBlue text-white"
+              >
+                Done (Close)
+              </Button>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* A5 Printable Slip Modal / View */}
       <Dialog open={printSlipOpen} onOpenChange={setPrintSlipOpen}>
-        <DialogContent className="sm:max-w-lg w-full rounded-2xl p-6 bg-white text-slate-900 border">
-          {slipToPrint && (
-            <div className="space-y-4 text-center print:p-0">
-              {/* Slip Header */}
-              <div className="flex flex-col items-center border-b pb-3 space-y-1">
-                <div className="relative w-14 h-14 mb-1">
-                  <Image
-                    src="/branding/coat_of_arms.png"
-                    alt="Ghana Coat of Arms"
-                    fill
-                    className="object-contain"
-                  />
+        <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-lg bg-white text-slate-900 border">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0 print:hidden">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-base font-bold text-[#0A2A66]">
+                Official School PIN Slip (A5)
+              </DialogTitle>
+            </DialogHeader>
+            <button
+              type="button"
+              onClick={() => setPrintSlipOpen(false)}
+              className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 sm:hidden shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px]">
+            {slipToPrint && (
+              <div className="space-y-4 text-center print:p-0">
+                {/* Slip Header */}
+                <div className="flex flex-col items-center border-b pb-3 space-y-1">
+                  <div className="relative w-14 h-14 mb-1">
+                    <Image
+                      src="/branding/coat_of_arms.png"
+                      alt="Ghana Coat of Arms"
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#0A2A66]">
+                    Atwima Mponua District Education Directorate
+                  </h3>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">
+                    Planning &amp; Statistics Unit &bull; AMDEMIS Portal
+                  </p>
+                  <span className="inline-block px-3 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[10px] uppercase tracking-wider">
+                    Official Headteacher Login Slip (A5)
+                  </span>
                 </div>
-                <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#0A2A66]">
-                  Atwima Mponua District Education Directorate
-                </h3>
-                <p className="text-[10px] font-bold text-slate-500 uppercase">
-                  Planning &amp; Statistics Unit &bull; AMDEMIS Portal
+
+                {/* Slip Details Box */}
+                <div className="p-4 rounded-xl border-2 border-slate-300 bg-slate-50 text-left space-y-2.5">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                      School Name
+                    </span>
+                    <span className="text-sm font-extrabold text-[#0A2A66]">
+                      {slipToPrint.school_name}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                        Circuit
+                      </span>
+                      <span className="text-xs font-bold text-slate-800">
+                        {slipToPrint.circuit_name}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                        School Login ID
+                      </span>
+                      <span className="text-base font-mono font-black text-[#0A2A66]">
+                        {slipToPrint.school_login_id}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-white border border-slate-300 text-center">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                      6-Digit Initial PIN
+                    </span>
+                    <span className="text-3xl font-mono font-black tracking-widest text-[#0A2A66] block mt-0.5">
+                      {slipToPrint.pin}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                      Sign In Web Address
+                    </span>
+                    <span className="text-xs font-mono font-bold text-blue-700">
+                      {typeof window !== 'undefined'
+                        ? window.location.origin
+                        : 'http://localhost:3000'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Crucial Instructions */}
+                <p className="text-[11px] font-bold text-slate-700 italic leading-relaxed">
+                  &ldquo;Keep this PIN private. Change it after your first login.&rdquo;
                 </p>
-                <span className="inline-block px-3 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[10px] uppercase tracking-wider">
-                  Official Headteacher Login Slip (A5)
-                </span>
               </div>
+            )}
+          </div>
 
-              {/* Slip Details Box */}
-              <div className="p-4 rounded-xl border-2 border-slate-300 bg-slate-50 text-left space-y-2.5">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-500 block">
-                    School Name
-                  </span>
-                  <span className="text-sm font-extrabold text-[#0A2A66]">
-                    {slipToPrint.school_name}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-500 block">
-                      Circuit
-                    </span>
-                    <span className="text-xs font-bold text-slate-800">
-                      {slipToPrint.circuit_name}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-500 block">
-                      School Login ID
-                    </span>
-                    <span className="text-base font-mono font-black text-[#0A2A66]">
-                      {slipToPrint.school_login_id}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-lg bg-white border border-slate-300 text-center">
-                  <span className="text-[10px] uppercase font-bold text-slate-500 block">
-                    6-Digit Initial PIN
-                  </span>
-                  <span className="text-3xl font-mono font-black tracking-widest text-[#0A2A66] block mt-0.5">
-                    {slipToPrint.pin}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-500 block">
-                    Sign In Web Address
-                  </span>
-                  <span className="text-xs font-mono font-bold text-blue-700">
-                    {typeof window !== 'undefined'
-                      ? window.location.origin
-                      : 'http://localhost:3000'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Crucial Instructions */}
-              <p className="text-[11px] font-bold text-slate-700 italic leading-relaxed">
-                &ldquo;Keep this PIN private. Change it after your first login.&rdquo;
-              </p>
-
-              <div className="pt-2 flex items-center justify-between gap-2 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setPrintSlipOpen(false)}
-                  className="h-10 text-xs font-bold flex-1"
-                >
-                  Close
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="h-10 text-xs font-bold bg-[#0A2A66] text-white flex-1 flex items-center justify-center gap-1.5"
-                >
-                  <Printer className="h-4 w-4" />
-                  <span>Print Slip</span>
-                </Button>
-              </div>
-            </div>
-          )}
+          <div
+            className="fixed sm:static left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-t border-slate-200 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0 print:hidden"
+            style={{
+              bottom: 'var(--kb, 0px)',
+              paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+            }}
+          >
+            <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPrintSlipOpen(false)}
+                className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
+              >
+                Close
+              </Button>
+              <Button
+                type="button"
+                onClick={() => window.print()}
+                className="h-11 rounded-xl text-xs font-bold bg-[#0A2A66] text-white flex items-center justify-center gap-1.5 w-full sm:w-auto"
+              >
+                <Printer className="h-4 w-4" />
+                <span>Print Slip Now</span>
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </AdminLayout>

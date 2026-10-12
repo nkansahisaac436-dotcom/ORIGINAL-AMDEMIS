@@ -30,6 +30,7 @@ import {
   Edit2,
   XCircle,
   CalendarDays,
+  X,
 } from 'lucide-react';
 import {
   Dialog,
@@ -40,6 +41,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { handleFieldFocus } from '@/hooks/use-visual-viewport';
 import {
   BarChart,
   Bar,
@@ -857,162 +859,239 @@ export default function AdminDashboardPage() {
 
         {/* Modal 1: Create / Edit Collection Round */}
         <Dialog open={roundModalOpen} onOpenChange={setRoundModalOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-brand-navy dark:text-brand-gold">
-                <CalendarDays className="h-5 w-5" />
-                <span>{editingRound ? 'Edit Collection Round' : 'Create Collection Round'}</span>
-              </DialogTitle>
-              <DialogDescription>
-                {editingRound
-                  ? 'Update collection cycle parameters and guidance for headteachers.'
-                  : 'Open a new annual EMIS return window for all schools across the district.'}
-              </DialogDescription>
-            </DialogHeader>
+          <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-md">
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+              <DialogHeader className="text-left">
+                <DialogTitle className="flex items-center gap-2 text-brand-navy dark:text-brand-gold text-base sm:text-lg font-black">
+                  <CalendarDays className="h-5 w-5 text-brand-gold shrink-0" />
+                  <span>{editingRound ? 'Edit Collection Round' : 'Create Collection Round'}</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  {editingRound
+                    ? 'Update collection cycle parameters and guidance for headteachers.'
+                    : 'Open a new annual EMIS return window for all schools across the district.'}
+                </DialogDescription>
+              </DialogHeader>
+              <button
+                type="button"
+                onClick={() => setRoundModalOpen(false)}
+                className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-            <form onSubmit={handleSaveRound} className="space-y-4 mt-2">
-              <div>
-                <Input
-                  label="Academic Year Title *"
-                  required
-                  placeholder="e.g. 2026/2027 Academic Year"
-                  value={roundTitle}
-                  onChange={(e) => setRoundTitle(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-foreground">
-                  Instructions for Headteachers (Optional)
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Instructions, guidelines, or notice for schools..."
-                  value={roundInstructions}
-                  onChange={(e) => setRoundInstructions(e.target.value)}
-                  className="w-full text-xs rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 focus:outline-none focus:ring-2 focus:ring-brand-gold text-foreground"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <form
+              onSubmit={handleSaveRound}
+              onFocusCapture={handleFieldFocus}
+              className="flex-1 flex flex-col min-h-0 overflow-hidden"
+            >
+              <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px] space-y-4">
                 <div>
                   <Input
-                    label="Opening Date *"
-                    type="date"
+                    label="Academic Year Title *"
                     required
-                    value={roundOpeningDate}
-                    onChange={(e) => setRoundOpeningDate(e.target.value)}
+                    autoFocus
+                    enterKeyHint="next"
+                    placeholder="e.g. 2026/2027 Academic Year"
+                    value={roundTitle}
+                    onChange={(e) => setRoundTitle(e.target.value)}
                   />
                 </div>
-                <div>
-                  <Input
-                    label="Deadline *"
-                    type="datetime-local"
-                    required
-                    value={roundDeadline}
-                    onChange={(e) => setRoundDeadline(e.target.value)}
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-foreground">
+                    Instructions for Headteachers (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Instructions, guidelines, or notice for schools..."
+                    value={roundInstructions}
+                    onChange={(e) => setRoundInstructions(e.target.value)}
+                    className="w-full text-base sm:text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 focus:outline-none focus:ring-2 focus:ring-brand-gold text-foreground"
                   />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Input
+                      label="Opening Date *"
+                      type="date"
+                      required
+                      enterKeyHint="next"
+                      value={roundOpeningDate}
+                      onChange={(e) => setRoundOpeningDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      label="Deadline *"
+                      type="datetime-local"
+                      required
+                      enterKeyHint="done"
+                      value={roundDeadline}
+                      onChange={(e) => setRoundDeadline(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <DialogFooter className="pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setRoundModalOpen(false)}
-                  disabled={isSubmittingRound}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmittingRound || !roundTitle.trim() || !roundDeadline}
-                  className="bg-brand-navy hover:bg-brand-midBlue text-white font-bold"
-                >
-                  {isSubmittingRound ? 'Saving...' : editingRound ? 'Save Changes' : 'Create & Activate Round'}
-                </Button>
-              </DialogFooter>
+              <div
+                className="fixed sm:static left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+                style={{
+                  bottom: 'var(--kb, 0px)',
+                  paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+                }}
+              >
+                <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setRoundModalOpen(false)}
+                    disabled={isSubmittingRound}
+                    className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmittingRound || !roundTitle.trim() || !roundDeadline}
+                    className="h-11 rounded-xl text-xs font-bold bg-brand-navy hover:bg-brand-midBlue text-white border-b-2 border-brand-gold w-full sm:w-auto"
+                  >
+                    {isSubmittingRound ? 'Saving...' : editingRound ? 'Save Changes' : 'Create & Activate Round'}
+                  </Button>
+                </DialogFooter>
+              </div>
             </form>
           </DialogContent>
         </Dialog>
 
         {/* Modal 2: Extend Deadline */}
         <Dialog open={extendModalOpen} onOpenChange={setExtendModalOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-brand-navy dark:text-brand-gold">
-                <Clock className="h-5 w-5" />
-                <span>Extend Collection Deadline</span>
-              </DialogTitle>
-              <DialogDescription>
-                Select a new submission deadline for &quot;{activeRound?.title}&quot;. Schools with drafts will be able to complete their submissions until the new date.
-              </DialogDescription>
-            </DialogHeader>
+          <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-md">
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+              <DialogHeader className="text-left">
+                <DialogTitle className="flex items-center gap-2 text-brand-navy dark:text-brand-gold text-base sm:text-lg font-black">
+                  <Clock className="h-5 w-5 text-brand-gold shrink-0" />
+                  <span>Extend Collection Deadline</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Select a new submission deadline for &quot;{activeRound?.title}&quot;. Schools with drafts will be able to complete their submissions until the new date.
+                </DialogDescription>
+              </DialogHeader>
+              <button
+                type="button"
+                onClick={() => setExtendModalOpen(false)}
+                className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-            <form onSubmit={handleExtendDeadline} className="space-y-4 mt-2">
-              <div>
-                <Input
-                  label="New Deadline *"
-                  type="datetime-local"
-                  required
-                  value={extendDeadlineVal}
-                  onChange={(e) => setExtendDeadlineVal(e.target.value)}
-                />
+            <form
+              onSubmit={handleExtendDeadline}
+              onFocusCapture={handleFieldFocus}
+              className="flex-1 flex flex-col min-h-0 overflow-hidden"
+            >
+              <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px] space-y-4">
+                <div>
+                  <Input
+                    label="New Deadline *"
+                    type="datetime-local"
+                    required
+                    autoFocus
+                    enterKeyHint="done"
+                    value={extendDeadlineVal}
+                    onChange={(e) => setExtendDeadlineVal(e.target.value)}
+                  />
+                </div>
               </div>
 
-              <DialogFooter className="pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setExtendModalOpen(false)}
-                  disabled={isExtendingDeadline}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isExtendingDeadline || !extendDeadlineVal}
-                  className="bg-brand-gold hover:bg-brand-goldHover text-brand-navy font-bold"
-                >
-                  {isExtendingDeadline ? 'Updating...' : 'Extend Deadline'}
-                </Button>
-              </DialogFooter>
+              <div
+                className="fixed sm:static left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+                style={{
+                  bottom: 'var(--kb, 0px)',
+                  paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+                }}
+              >
+                <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setExtendModalOpen(false)}
+                    disabled={isExtendingDeadline}
+                    className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isExtendingDeadline || !extendDeadlineVal}
+                    className="h-11 rounded-xl text-xs font-bold bg-[#D4AF37] hover:bg-[#b5952f] text-[#0A2A66] w-full sm:w-auto"
+                  >
+                    {isExtendingDeadline ? 'Updating...' : 'Extend Deadline'}
+                  </Button>
+                </DialogFooter>
+              </div>
             </form>
           </DialogContent>
         </Dialog>
 
         {/* Modal 3: Close Round Confirmation */}
         <Dialog open={closeModalOpen} onOpenChange={setCloseModalOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-rose-600">
-                <AlertCircle className="h-5 w-5" />
-                <span>Close Collection Round?</span>
-              </DialogTitle>
-              <DialogDescription className="text-slate-600 dark:text-slate-300 pt-1 leading-relaxed">
+          <DialogContent fullScreenOnMobile hideDefaultClose className="sm:max-w-md">
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:px-0 sm:py-0 sm:pb-3 sm:border-b-0 shrink-0">
+              <DialogHeader className="text-left">
+                <DialogTitle className="flex items-center gap-2 text-rose-600 text-base font-black">
+                  <AlertCircle className="h-5 w-5 shrink-0" />
+                  <span>Close Collection Round?</span>
+                </DialogTitle>
+              </DialogHeader>
+              <button
+                type="button"
+                onClick={() => setCloseModalOpen(false)}
+                className="p-2 -mr-1 rounded-full text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 sm:hidden shrink-0"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-2 pb-[130px]">
+              <DialogDescription className="text-slate-600 dark:text-slate-300 pt-1 leading-relaxed text-xs">
                 Are you sure you want to close &quot;{activeRound?.title}&quot;? Headteachers will immediately no longer be able to submit or edit their EMIS figures. This action locks all responses for final district reporting.
               </DialogDescription>
-            </DialogHeader>
+            </div>
 
-            <DialogFooter className="pt-3 gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setCloseModalOpen(false)}
-                disabled={isClosingRound}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={handleCloseRound}
-                disabled={isClosingRound}
-                className="font-bold bg-rose-600 hover:bg-rose-700 text-white"
-              >
-                {isClosingRound ? 'Closing...' : 'Yes, Close Round'}
-              </Button>
-            </DialogFooter>
+            <div
+              className="fixed sm:static left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-0 sm:py-3 sm:border-t-0 shrink-0"
+              style={{
+                bottom: 'var(--kb, 0px)',
+                paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+              }}
+            >
+              <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCloseModalOpen(false)}
+                  disabled={isClosingRound}
+                  className="h-11 rounded-xl text-xs font-bold w-full sm:w-auto"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleCloseRound}
+                  disabled={isClosingRound}
+                  className="h-11 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white w-full sm:w-auto"
+                >
+                  {isClosingRound ? 'Closing...' : 'Yes, Close Round'}
+                </Button>
+              </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

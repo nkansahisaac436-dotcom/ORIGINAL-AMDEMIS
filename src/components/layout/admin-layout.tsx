@@ -23,6 +23,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { getInitials } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { useVisualViewport } from '@/hooks/use-visual-viewport';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -39,6 +40,7 @@ export function AdminLayout({
 }: AdminLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { isKeyboardOpen } = useVisualViewport();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = React.useState(false);
 
@@ -260,7 +262,9 @@ export function AdminLayout({
         {/* Mobile Bottom Navigation Bar (4 Primary Tabs) */}
         <nav
           aria-label="Mobile Bottom Navigation"
-          className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0A2A66] text-white border-t border-[#061A40] shadow-lg flex items-center justify-around px-2 py-2 safe-area-bottom"
+          className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0A2A66] text-white border-t border-[#061A40] shadow-lg flex items-center justify-around px-2 py-2 safe-area-bottom transition-all duration-200 ${
+            isKeyboardOpen ? 'hidden pointer-events-none' : ''
+          }`}
         >
           <Link
             href="/admin/dashboard"
