@@ -4,7 +4,9 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -43,6 +45,8 @@ export default function AdminSchoolsScreen() {
   const [addHtPhone, setAddHtPhone] = useState('');
   const [addLevels, setAddLevels] = useState<string[]>(['primary', 'jhs']);
   const [isSubmittingSchool, setIsSubmittingSchool] = useState(false);
+  const [circuitPickerVisible, setCircuitPickerVisible] = useState(false);
+  const [circuitPickerSearch, setCircuitPickerSearch] = useState('');
 
   // School Created (PIN Shown Once) Modal
   const [createdModalVisible, setCreatedModalVisible] = useState(false);
@@ -398,155 +402,294 @@ export default function AdminSchoolsScreen() {
         )}
       />
 
-      {/* Add School Modal (Full-Screen Form) */}
-      <Modal visible={addModalVisible} animationType="slide">
-        <SafeAreaView style={styles.formContainer}>
-          <View style={styles.formHeader}>
-            <TouchableOpacity onPress={() => setAddModalVisible(false)}>
-              <Ionicons name="arrow-back" size={24} color={THEME.colors.navy} />
+      {/* Add School Modal (Top-Starting Full-Screen Form) */}
+      <Modal
+        visible={addModalVisible}
+        animationType="slide"
+        onRequestClose={() => setAddModalVisible(false)}
+      >
+        <SafeAreaView style={styles.fullScreenModal}>
+          {/* Top Header Bar with Close X */}
+          <View style={styles.fullScreenHeader}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={styles.fullScreenTitle}>Add District School</Text>
+              <Text style={styles.fullScreenSubtitle}>
+                Generates next School Login ID (AMD-XXXX) and secret 6-digit PIN.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setAddModalVisible(false)}
+              style={styles.closeBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="close" size={24} color={THEME.colors.navy} />
             </TouchableOpacity>
-            <Text style={styles.formHeaderTitle}>Add School & Issue PIN</Text>
-            <View style={{ width: 24 }} />
           </View>
 
-          <ScrollView contentContainerStyle={styles.formScroll}>
-            {/* School Name */}
-            <Text style={styles.fieldLabel}>School Name *</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. Nyinahin D/A J.H.S."
-              value={addName}
-              onChangeText={setAddName}
-            />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1 }}
+          >
+            <ScrollView
+              contentContainerStyle={styles.formScroll}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* 1. School Name */}
+              <Text style={styles.fieldLabel}>School Name *</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g. Nyinahin D/A J.H.S."
+                placeholderTextColor={THEME.colors.textMuted}
+                value={addName}
+                onChangeText={setAddName}
+                autoFocus
+                returnKeyType="next"
+              />
 
-            {/* Public vs Private Status (Two Big Buttons) */}
-            <Text style={styles.fieldLabel}>Institution Status *</Text>
-            <View style={styles.statusButtonsRow}>
-              <TouchableOpacity
-                style={[styles.statusBigBtn, addStatus === 'public' && styles.statusBigBtnActive]}
-                onPress={() => setAddStatus('public')}
-              >
-                <Ionicons
-                  name="business"
-                  size={20}
-                  color={addStatus === 'public' ? '#FFFFFF' : THEME.colors.navy}
-                />
-                <Text
-                  style={[styles.statusBigBtnText, addStatus === 'public' && styles.statusBigBtnTextActive]}
-                >
-                  Public School
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.statusBigBtn, addStatus === 'private' && styles.statusBigBtnActive]}
-                onPress={() => setAddStatus('private')}
-              >
-                <Ionicons
-                  name="shield"
-                  size={20}
-                  color={addStatus === 'private' ? '#FFFFFF' : THEME.colors.navy}
-                />
-                <Text
-                  style={[styles.statusBigBtnText, addStatus === 'private' && styles.statusBigBtnTextActive]}
-                >
-                  Private Institution
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Circuit Selector */}
-            <Text style={styles.fieldLabel}>Assigned Circuit *</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
-              {circuits.map((c) => (
+              {/* 2. Public vs Private Status (Two Big Buttons) */}
+              <Text style={styles.fieldLabel}>Institution Status *</Text>
+              <View style={styles.statusButtonsRow}>
                 <TouchableOpacity
-                  key={c.id}
-                  style={[styles.circuitPill, addCircuitId === c.id && styles.circuitPillActive]}
-                  onPress={() => setAddCircuitId(c.id)}
+                  style={[styles.statusBigBtn, addStatus === 'public' && styles.statusBigBtnActive]}
+                  onPress={() => setAddStatus('public')}
                 >
-                  <Text style={[styles.circuitPillText, addCircuitId === c.id && styles.circuitPillTextActive]}>
-                    {c.name}
+                  <Ionicons
+                    name="business"
+                    size={20}
+                    color={addStatus === 'public' ? '#FFFFFF' : THEME.colors.navy}
+                  />
+                  <Text
+                    style={[styles.statusBigBtnText, addStatus === 'public' && styles.statusBigBtnTextActive]}
+                  >
+                    Public School
                   </Text>
                 </TouchableOpacity>
-              ))}
+
+                <TouchableOpacity
+                  style={[styles.statusBigBtn, addStatus === 'private' && styles.statusBigBtnActive]}
+                  onPress={() => setAddStatus('private')}
+                >
+                  <Ionicons
+                    name="shield"
+                    size={20}
+                    color={addStatus === 'private' ? '#FFFFFF' : THEME.colors.navy}
+                  />
+                  <Text
+                    style={[styles.statusBigBtnText, addStatus === 'private' && styles.statusBigBtnTextActive]}
+                  >
+                    Private Institution
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* 3. Circuit Selector (Searchable Picker Button) */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, marginBottom: 6 }}>
+                <Text style={[styles.fieldLabel, { marginTop: 0, marginBottom: 0 }]}>Assigned Circuit *</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setCircuitPickerSearch('');
+                    setCircuitPickerVisible(true);
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.colors.midBlue }}>
+                    Change Circuit
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={styles.circuitSelectBox}
+                onPress={() => {
+                  setCircuitPickerSearch('');
+                  setCircuitPickerVisible(true);
+                }}
+              >
+                <Ionicons name="map" size={18} color={THEME.colors.navy} />
+                <Text style={styles.circuitSelectBoxText}>
+                  {circuits.find((c) => c.id === addCircuitId)?.name || 'Tap to choose circuit...'}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color={THEME.colors.textMuted} />
+              </TouchableOpacity>
+
+              {/* 4. Town / Community */}
+              <Text style={styles.fieldLabel}>Town / Community (Optional)</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g. Nyinahin"
+                placeholderTextColor={THEME.colors.textMuted}
+                value={addTown}
+                onChangeText={setAddTown}
+                returnKeyType="next"
+              />
+
+              {/* 5. EMIS Code */}
+              <Text style={styles.fieldLabel}>EMIS Code (Optional)</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g. 1066320001"
+                placeholderTextColor={THEME.colors.textMuted}
+                value={addEmisCode}
+                onChangeText={setAddEmisCode}
+                keyboardType="numeric"
+                returnKeyType="next"
+              />
+
+              {/* 6. Headteacher Name & Phone */}
+              <Text style={styles.fieldLabel}>Headteacher Full Name (Optional)</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g. Samuel Boateng"
+                placeholderTextColor={THEME.colors.textMuted}
+                value={addHtName}
+                onChangeText={setAddHtName}
+                returnKeyType="next"
+              />
+
+              <Text style={styles.fieldLabel}>Headteacher Phone Number (Optional)</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g. 0244123456"
+                placeholderTextColor={THEME.colors.textMuted}
+                value={addHtPhone}
+                onChangeText={setAddHtPhone}
+                keyboardType="phone-pad"
+                returnKeyType="done"
+              />
+
+              {/* 7. Starting Levels */}
+              <Text style={styles.fieldLabel}>Education Levels at this School</Text>
+              <View style={styles.levelsGrid}>
+                {[
+                  { id: 'creche', label: 'Crèche / Nursery' },
+                  { id: 'kg', label: 'Kindergarten (KG)' },
+                  { id: 'primary', label: 'Primary School' },
+                  { id: 'jhs', label: 'Junior High (JHS)' },
+                ].map((lvl) => {
+                  const checked = addLevels.includes(lvl.id);
+                  return (
+                    <TouchableOpacity
+                      key={lvl.id}
+                      style={[styles.levelCheckItem, checked && styles.levelCheckItemActive]}
+                      onPress={() => toggleLevel(lvl.id)}
+                    >
+                      <Ionicons
+                        name={checked ? 'checkbox' : 'square-outline'}
+                        size={18}
+                        color={checked ? THEME.colors.navy : THEME.colors.textMuted}
+                      />
+                      <Text style={styles.levelCheckLabel}>{lvl.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </ScrollView>
 
-            {/* Town / Community */}
-            <Text style={styles.fieldLabel}>Town / Community (Optional)</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. Nyinahin"
-              value={addTown}
-              onChangeText={setAddTown}
-            />
+            {/* Sticky Action Footer Pinned Above Keyboard */}
+            <View style={styles.stickySchoolFooter}>
+              <TouchableOpacity
+                style={styles.cancelSchoolBtn}
+                onPress={() => setAddModalVisible(false)}
+                disabled={isSubmittingSchool}
+              >
+                <Text style={styles.cancelSchoolBtnText}>Cancel</Text>
+              </TouchableOpacity>
 
-            {/* EMIS Code */}
-            <Text style={styles.fieldLabel}>EMIS Code (Optional)</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. 1066320001"
-              value={addEmisCode}
-              onChangeText={setAddEmisCode}
-              keyboardType="numeric"
-            />
-
-            {/* Headteacher Name & Phone */}
-            <Text style={styles.fieldLabel}>Headteacher Full Name (Optional)</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. Samuel Boateng"
-              value={addHtName}
-              onChangeText={setAddHtName}
-            />
-
-            <Text style={styles.fieldLabel}>Headteacher Phone Number (Optional)</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. 0244123456"
-              value={addHtPhone}
-              onChangeText={setAddHtPhone}
-              keyboardType="phone-pad"
-            />
-
-            {/* Starting Levels */}
-            <Text style={styles.fieldLabel}>Education Levels at this School</Text>
-            <View style={styles.levelsGrid}>
-              {[
-                { id: 'creche', label: 'Crèche / Nursery' },
-                { id: 'kg', label: 'Kindergarten (KG)' },
-                { id: 'primary', label: 'Primary School' },
-                { id: 'jhs', label: 'Junior High (JHS)' },
-              ].map((lvl) => {
-                const checked = addLevels.includes(lvl.id);
-                return (
-                  <TouchableOpacity
-                    key={lvl.id}
-                    style={[styles.levelCheckItem, checked && styles.levelCheckItemActive]}
-                    onPress={() => toggleLevel(lvl.id)}
-                  >
-                    <Ionicons
-                      name={checked ? 'checkbox' : 'square-outline'}
-                      size={18}
-                      color={checked ? THEME.colors.navy : THEME.colors.textMuted}
-                    />
-                    <Text style={styles.levelCheckLabel}>{lvl.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
+              <TouchableOpacity
+                style={styles.saveSchoolBtn}
+                onPress={handleSaveNewSchool}
+                disabled={isSubmittingSchool || !addName.trim() || !addCircuitId}
+              >
+                {isSubmittingSchool ? (
+                  <ActivityIndicator color={THEME.colors.navy} />
+                ) : (
+                  <Text style={styles.saveSchoolBtnText}>Create School & Issue PIN</Text>
+                )}
+              </TouchableOpacity>
             </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
 
+      {/* Searchable Full-Screen Circuit Picker Modal */}
+      <Modal
+        visible={circuitPickerVisible}
+        animationType="slide"
+        onRequestClose={() => setCircuitPickerVisible(false)}
+      >
+        <SafeAreaView style={styles.fullScreenModal}>
+          <View style={styles.fullScreenHeader}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={styles.fullScreenTitle}>Select District Circuit</Text>
+              <Text style={styles.fullScreenSubtitle}>Assign school to an educational zone</Text>
+            </View>
             <TouchableOpacity
-              style={styles.saveSchoolBtn}
-              onPress={handleSaveNewSchool}
-              disabled={isSubmittingSchool}
+              onPress={() => setCircuitPickerVisible(false)}
+              style={styles.closeBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              {isSubmittingSchool ? (
-                <ActivityIndicator color={THEME.colors.navy} />
-              ) : (
-                <Text style={styles.saveSchoolBtnText}>Create School & Issue PIN</Text>
-              )}
+              <Ionicons name="close" size={24} color={THEME.colors.navy} />
             </TouchableOpacity>
-          </ScrollView>
+          </View>
+
+          <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: '#FFFFFF' }}>
+            <View style={styles.pickerSearchBox}>
+              <Ionicons name="search" size={18} color={THEME.colors.textMuted} />
+              <TextInput
+                style={styles.pickerSearchInput}
+                placeholder="Search circuits..."
+                placeholderTextColor={THEME.colors.textMuted}
+                value={circuitPickerSearch}
+                onChangeText={setCircuitPickerSearch}
+                autoFocus
+              />
+              {circuitPickerSearch ? (
+                <TouchableOpacity onPress={() => setCircuitPickerSearch('')}>
+                  <Ionicons name="close-circle" size={18} color={THEME.colors.textMuted} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+
+          <FlatList
+            data={circuits.filter((c) =>
+              c.name.toLowerCase().includes(circuitPickerSearch.trim().toLowerCase())
+            )}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ padding: 12 }}
+            ListEmptyComponent={
+              <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                <Text style={{ color: THEME.colors.textMuted, fontSize: 13 }}>
+                  No circuits match &quot;{circuitPickerSearch}&quot;
+                </Text>
+              </View>
+            }
+            renderItem={({ item }) => {
+              const selected = addCircuitId === item.id;
+              return (
+                <TouchableOpacity
+                  style={[styles.pickerItem, selected && styles.pickerItemSelected]}
+                  onPress={() => {
+                    setAddCircuitId(item.id);
+                    setCircuitPickerVisible(false);
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                    <Ionicons
+                      name="map-outline"
+                      size={20}
+                      color={selected ? THEME.colors.gold : THEME.colors.navy}
+                    />
+                    <Text style={[styles.pickerItemText, selected && styles.pickerItemTextSelected]}>
+                      {item.name}
+                    </Text>
+                  </View>
+                  {selected && (
+                    <Ionicons name="checkmark-circle" size={20} color={THEME.colors.gold} />
+                  )}
+                </TouchableOpacity>
+              );
+            }}
+          />
         </SafeAreaView>
       </Modal>
 
@@ -900,13 +1043,120 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   formInput: {
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 16,
+    backgroundColor: '#F8FAFC',
+    color: THEME.colors.text,
+  },
+  fullScreenModal: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  fullScreenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  fullScreenTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: THEME.colors.navy,
+  },
+  fullScreenSubtitle: {
+    fontSize: 12,
+    color: THEME.colors.textMuted,
+    marginTop: 2,
+  },
+  closeBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+  },
+  circuitSelectBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    padding: 14,
+    backgroundColor: '#F8FAFC',
+    marginBottom: 6,
+  },
+  circuitSelectBoxText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: THEME.colors.text,
+    flex: 1,
+    marginLeft: 10,
+  },
+  stickySchoolFooter: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  cancelSchoolBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: THEME.colors.border,
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  cancelSchoolBtnText: {
     fontSize: 14,
-    backgroundColor: THEME.colors.surface,
+    fontWeight: '600',
+    color: THEME.colors.textMuted,
+  },
+  pickerSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  pickerSearchInput: {
+    flex: 1,
+    fontSize: 16,
     color: THEME.colors.text,
+  },
+  pickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  pickerItemSelected: {
+    backgroundColor: '#EFF6FF',
+    borderColor: THEME.colors.navy,
+  },
+  pickerItemText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: THEME.colors.navy,
+  },
+  pickerItemTextSelected: {
+    fontWeight: 'bold',
   },
   statusButtonsRow: {
     flexDirection: 'row',

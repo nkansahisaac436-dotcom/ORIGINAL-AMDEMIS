@@ -4,9 +4,12 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -290,33 +293,59 @@ export default function AdminCircuitsScreen() {
         }}
       />
 
-      {/* Add / Edit Circuit Modal */}
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
+      {/* Add / Edit Circuit Full-Screen Modal */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <SafeAreaView style={styles.fullScreenModal}>
+          {/* Top Header Bar with Close X */}
+          <View style={styles.fullScreenHeader}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={styles.fullScreenTitle}>
                 {editingCircuit ? 'Rename Circuit' : 'Add New District Circuit'}
               </Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={22} color={THEME.colors.textMuted} />
-              </TouchableOpacity>
+              <Text style={styles.fullScreenSubtitle}>
+                Educational cluster zone within Atwima Mponua District.
+              </Text>
             </View>
+            <TouchableOpacity
+              onPress={() => setModalVisible(false)}
+              style={styles.closeBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="close" size={24} color={THEME.colors.navy} />
+            </TouchableOpacity>
+          </View>
 
-            <Text style={styles.modalSubtitle}>
-              Enter the official circuit name (2 to 60 characters).
-            </Text>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1 }}
+          >
+            <ScrollView
+              contentContainerStyle={styles.fullScreenBody}
+              keyboardShouldPersistTaps="handled"
+            >
+              <Text style={styles.fieldLabel}>Circuit Name *</Text>
+              <TextInput
+                style={styles.fullScreenInput}
+                placeholder="e.g. Nyinahin Circuit"
+                placeholderTextColor={THEME.colors.textMuted}
+                value={circuitName}
+                onChangeText={setCircuitName}
+                maxLength={60}
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={handleSaveCircuit}
+              />
+              <Text style={styles.inputHelper}>
+                Must be between 2 and 60 characters and unique across the district.
+              </Text>
+            </ScrollView>
 
-            <TextInput
-              style={styles.modalInput}
-              placeholder="e.g. Nyinahin Circuit"
-              value={circuitName}
-              onChangeText={setCircuitName}
-              maxLength={60}
-              autoFocus
-            />
-
-            <View style={styles.modalActions}>
+            {/* Sticky Action Footer Pinned Above Keyboard */}
+            <View style={styles.fullScreenFooter}>
               <TouchableOpacity
                 style={styles.cancelBtn}
                 onPress={() => setModalVisible(false)}
@@ -339,8 +368,8 @@ export default function AdminCircuitsScreen() {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -527,70 +556,93 @@ const styles = StyleSheet.create({
     color: THEME.colors.textMuted,
     textTransform: 'capitalize',
   },
-  modalOverlay: {
+  fullScreenModal: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: '#FFFFFF',
   },
-  modalContent: {
-    backgroundColor: THEME.colors.surface,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    padding: 20,
-    paddingBottom: 34,
-  },
-  modalHeader: {
+  fullScreenHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
-  modalTitle: {
-    fontSize: 16,
+  fullScreenTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: THEME.colors.navy,
   },
-  modalSubtitle: {
+  fullScreenSubtitle: {
     fontSize: 12,
     color: THEME.colors.textMuted,
-    marginBottom: 14,
+    marginTop: 2,
   },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
+  closeBtn: {
+    padding: 6,
     borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
+    backgroundColor: '#F1F5F9',
+  },
+  fullScreenBody: {
+    padding: 16,
+    paddingBottom: 140,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: THEME.colors.navy,
+    marginBottom: 8,
+  },
+  fullScreenInput: {
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 16,
     backgroundColor: '#F8FAFC',
     color: THEME.colors.text,
-    marginBottom: 18,
   },
-  modalActions: {
+  inputHelper: {
+    fontSize: 11,
+    color: THEME.colors.textMuted,
+    marginTop: 6,
+    lineHeight: 16,
+  },
+  fullScreenFooter: {
     flexDirection: 'row',
     gap: 10,
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: THEME.colors.border,
+    backgroundColor: '#F8FAFC',
   },
   cancelBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: THEME.colors.textMuted,
   },
   saveBtn: {
     flex: 1,
     backgroundColor: THEME.colors.gold,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: '#B8860B',
   },
   saveBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 'bold',
     color: THEME.colors.navy,
   },

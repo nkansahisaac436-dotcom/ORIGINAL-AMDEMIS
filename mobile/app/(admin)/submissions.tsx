@@ -4,9 +4,12 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -275,34 +278,59 @@ export default function AdminSubmissionsScreen() {
         }}
       />
 
-      {/* Reopen Modal */}
+      {/* Reopen Modal (Full-Screen Top-Aligned) */}
       <Modal
         visible={reopenModalVisible}
-        transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setReopenModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Reopen Submission Form</Text>
-            <Text style={styles.modalSchool}>{selectedSubmission?.schools?.name}</Text>
-            <Text style={styles.modalSub}>
-              Enter the reason or instruction for the headteacher. They will be notified to make corrections and re-submit.
-            </Text>
+        <SafeAreaView style={styles.fullScreenModal}>
+          <View style={styles.fullScreenHeader}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={styles.fullScreenTitle}>Reopen Submission Form</Text>
+              <Text style={styles.fullScreenSubtitle}>
+                {selectedSubmission?.schools?.name || 'School Submission'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setReopenModalVisible(false)}
+              style={styles.closeBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="close" size={24} color={THEME.colors.navy} />
+            </TouchableOpacity>
+          </View>
 
-            <TextInput
-              style={styles.reasonInput}
-              multiline
-              numberOfLines={3}
-              placeholder="e.g. Please verify JHS3 Mathematics teacher count and classroom repair numbers..."
-              value={reopenReason}
-              onChangeText={setReopenReason}
-            />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1 }}
+          >
+            <ScrollView
+              contentContainerStyle={styles.fullScreenBody}
+              keyboardShouldPersistTaps="handled"
+            >
+              <Text style={styles.modalSub}>
+                Enter the reason or instruction for the headteacher. They will be notified to make corrections and re-submit.
+              </Text>
 
-            <View style={styles.modalActions}>
+              <Text style={styles.fieldLabel}>Correction Instructions *</Text>
+              <TextInput
+                style={styles.reasonInput}
+                multiline
+                numberOfLines={4}
+                placeholder="e.g. Please verify JHS3 Mathematics teacher count and classroom repair numbers..."
+                placeholderTextColor={THEME.colors.textMuted}
+                value={reopenReason}
+                onChangeText={setReopenReason}
+                autoFocus
+              />
+            </ScrollView>
+
+            <View style={styles.fullScreenFooter}>
               <TouchableOpacity
                 style={styles.cancelBtn}
                 onPress={() => setReopenModalVisible(false)}
+                disabled={reopening}
               >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
@@ -318,8 +346,8 @@ export default function AdminSubmissionsScreen() {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -432,71 +460,95 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: THEME.colors.navy,
   },
-  modalOverlay: {
+  fullScreenModal: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalContent: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
   },
-  modalTitle: {
-    fontSize: 17,
+  fullScreenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  fullScreenTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: THEME.colors.navy,
   },
-  modalSchool: {
-    fontSize: 14,
-    fontWeight: '600',
+  fullScreenSubtitle: {
+    fontSize: 13,
     color: THEME.colors.midBlue,
+    fontWeight: '600',
     marginTop: 2,
+  },
+  closeBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+  },
+  fullScreenBody: {
+    padding: 16,
+    paddingBottom: 120,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: THEME.colors.navy,
     marginBottom: 8,
   },
   modalSub: {
-    fontSize: 12,
+    fontSize: 13,
     color: THEME.colors.textMuted,
-    lineHeight: 16,
-    marginBottom: 14,
+    lineHeight: 18,
+    marginBottom: 16,
   },
   reasonInput: {
     backgroundColor: '#FAFCFF',
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 16,
     color: THEME.colors.text,
     textAlignVertical: 'top',
-    minHeight: 80,
-    marginBottom: 16,
+    minHeight: 120,
   },
-  modalActions: {
+  fullScreenFooter: {
     flexDirection: 'row',
     gap: 10,
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: 'center',
   },
   cancelBtnText: {
     color: THEME.colors.textMuted,
     fontWeight: '600',
+    fontSize: 14,
   },
   confirmReopenBtn: {
     flex: 1,
     backgroundColor: THEME.colors.warning,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: 'center',
   },
   confirmReopenText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
+    fontSize: 14,
   },
 });

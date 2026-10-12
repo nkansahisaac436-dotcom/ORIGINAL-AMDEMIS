@@ -51,6 +51,7 @@ export default function AdminLayout() {
         },
         tabBarActiveTintColor: THEME.colors.navy,
         tabBarInactiveTintColor: THEME.colors.textMuted,
+        tabBarHideOnKeyboard: true,
       }}
     >
       <Tabs.Screen
